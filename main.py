@@ -278,6 +278,7 @@ with st.sidebar:
         if api_key_input:
             api_key = api_key_input
         else:
+            # DO NOT HARDCODE YOUR KEY HERE. Use .env file or Streamlit secrets.
             api_key = os.getenv("GOOGLE_API_KEY")
 
         if not api_key:
