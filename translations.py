@@ -1,0 +1,102 @@
+TRANSLATIONS = {
+    "Nederlands": {
+        "header_title": "MediClear AI",
+        "header_subtitle": "Uw Persoonlijke Medische Vertaler",
+        "hero_text": "Medische taal is lastig. Wij maken het begrijpelijk.",
+        "input_label": "Wat wilt u laten vertalen?",
+        "tab_text": "✍️ Typ tekst",
+        "tab_file": "📄 Upload bestand",
+        "placeholder_text": "Plak hier de tekst van uw dokter of brief...",
+        "upload_help": "Upload een PDF of afbeelding.",
+        "btn_analyze": "Vertaal naar Begrijpelijke Taal",
+        "btn_processing": "Bezig met analyseren...",
+        "result_header": "Uw Begrijpelijke Uitleg",
+        "audio_label": "🔊 Lees voor",
+        "chat_header": "Heeft u nog vragen over deze uitleg?",
+        "chat_placeholder": "Vraag bijvoorbeeld: 'Moet ik me zorgen maken?'",
+        "footer_disclaimer": "Disclaimer: Dit is een AI-hulpmiddel. Raadpleeg bij medische vragen altijd uw arts.",
+        "settings_title": "Instellingen",
+        "err_no_api": "⚠️ Geen Google API Key gevonden. Voeg deze toe in de instellingen of .env bestand.",
+        "err_no_input": "⚠️ Voer eerst tekst in of upload een bestand.",
+        "success_upload": "Bestand succesvol ingelezen!",
+        "err_upload": "Fout bij inlezen bestand.",
+        "audio_playing": "Audio wordt afgespeeld..."
+    },
+    "English": {
+        "header_title": "MediClear AI",
+        "header_subtitle": "Your Personal Medical Translator",
+        "hero_text": "Medical jargon is hard. We make it simple.",
+        "input_label": "What would you like to translate?",
+        "tab_text": "✍️ Type Text",
+        "tab_file": "📄 Upload File",
+        "placeholder_text": "Paste the doctor's note or letter here...",
+        "upload_help": "Upload a PDF letter or photo.",
+        "btn_analyze": "Translate to Simple Language",
+        "btn_processing": "Analyzing...",
+        "result_header": "Your Simple Explanation",
+        "audio_label": "🔊 Read Aloud",
+        "chat_header": "Any questions about this explanation?",
+        "chat_placeholder": "Ask something like: 'Should I be worried?'",
+        "footer_disclaimer": "Disclaimer: AI tool. Always consult a doctor for medical advice.",
+        "settings_title": "Settings",
+        "err_no_api": "⚠️ No Google API Key found. Add it in settings or .env file.",
+        "err_no_input": "⚠️ Please enter text or upload a file first.",
+        "success_upload": "File loaded successfully!",
+        "err_upload": "Error loading file.",
+        "audio_playing": "Playing audio..."
+    },
+    "Türkçe": {
+        "header_title": "MediClear AI", "header_subtitle": "Kişisel Tıbbi Tercümanınız",
+        "hero_text": "Tıbbi dili anlamak zordur. Sizin için basitleştiriyoruz.", "input_label": "Neyi çevirmek istersiniz?",
+        "tab_text": "✍️ Metin Yaz", "tab_file": "📄 Dosya Yükle", "placeholder_text": "Doktorun yazdıklarını buraya yapıştırın...",
+        "upload_help": "PDF veya fotoğraf yükleyin.", "btn_analyze": "Basitçe Açıkla", "btn_processing": "İnceleniyor...",
+        "result_header": "Anlaşılır Açıklama", "audio_label": "🔊 Sesli Oku", "chat_header": "Bu açıklama hakkında sorunuz var mı?",
+        "chat_placeholder": "Örneğin: 'Endişelenmeli miyim?'", "footer_disclaimer": "Yapay zeka aracıdır. Doktora danışın.",
+        "settings_title": "Ayarlar", "err_no_api": "⚠️ Google API anahtarı bulunamadı.", "err_no_input": "⚠️ Lütfen metin girin veya dosya yükleyin.", "success_upload": "Dosya yüklendi!", "err_upload": "Dosya yüklenemedi.", "audio_playing": "Ses çalınıyor..."
+    },
+    "العربية": {
+        "header_title": "MediClear AI", "header_subtitle": "مترجمك الطبي الشخصي",
+        "hero_text": "المصطلحات الطبية صعبة. نحن نبسطها.", "input_label": "ماذا تريد أن تترجم؟",
+        "tab_text": "✍️ كتابة نص", "tab_file": "📄 رفع ملف", "placeholder_text": "الصق نص الطبيب هنا...",
+        "upload_help": "رفع ملف PDF أو صورة.", "btn_analyze": "شرح بـ لغة بسيطة", "btn_processing": "جاري التحليل...",
+        "result_header": "الشرح المبسط", "audio_label": "🔊 قراءة بصوت عال", "chat_header": "هل لديك أسئلة حول هذا الشرح؟",
+        "chat_placeholder": "اسأل مثلا: 'هل يجب أن أقلق؟'", "footer_disclaimer": "تنويه: أداة ذكاء اصطناعي. استشر الطبيب دائما.",
+        "settings_title": "الإعدادات", "err_no_api": "⚠️ لم يتم العثور على مفتاح Google API.", "err_no_input": "⚠️ يرجى إدخال نص أو رفع ملف.", "success_upload": "تم تحميل الملف!", "err_upload": "خطأ في تحميل الملف.", "audio_playing": "يتم تشغيل الصوت..."
+    },
+    "Polski": {
+        "header_title": "MediClear AI", "header_subtitle": "Twój Osobisty Tłumacz Medyczny",
+        "hero_text": "Medyczny żargon jest trudny. My go upraszczamy.", "input_label": "Co chcesz przetłumaczyć?",
+        "tab_text": "✍️ Wpisz tekst", "tab_file": "📄 Prześlij plik", "placeholder_text": "Wklej tutaj tekst od lekarza...",
+        "upload_help": "Prześlij list PDF lub zdjęcie.", "btn_analyze": "Przetłumacz na prosty język", "btn_processing": "Analizowanie...",
+        "result_header": "Twoje Proste Wyjaśnienie", "audio_label": "🔊 Przeczytaj na głos", "chat_header": "Masz pytania do tego wyjaśnienia?",
+        "chat_placeholder": "Zapytaj np.: 'Czy mam się martwić?'", "footer_disclaimer": "Uwaga: Narzędzie AI. Skonsultuj się z lekarzem.",
+        "settings_title": "Ustawienia", "err_no_api": "⚠️ Brak klucza Google API.", "err_no_input": "⚠️ Wpisz tekst lub prześlij plik.", "success_upload": "Plik wczytany!", "err_upload": "Błąd wczytywania pliku.", "audio_playing": "Odtwarzanie dźwięku..."
+    },
+    "Deutsch": {
+        "header_title": "MediClear AI", "header_subtitle": "Ihr persönlicher medizinischer Übersetzer",
+        "hero_text": "Medizinische Sprache ist schwer. Wir machen es einfach.", "input_label": "Was möchten Sie übersetzen?",
+        "tab_text": "✍️ Text eingeben", "tab_file": "📄 Datei hochladen", "placeholder_text": "Fügen Sie hier den Arzttext ein...",
+        "upload_help": "PDF oder Foto hochladen.", "btn_analyze": "Einfach erklären", "btn_processing": "Analysiere...",
+        "result_header": "Ihre einfache Erklärung", "audio_label": "🔊 Vorlesen", "chat_header": "Haben Sie Fragen zu dieser Erklärung?",
+        "chat_placeholder": "Fragen Sie z.B.: 'Muss ich mir Sorgen machen?'", "footer_disclaimer": "Hinweis: KI-Tool. Im Zweifel Arzt fragen.",
+        "settings_title": "Einstellungen", "err_no_api": "⚠️ Kein Google API-Schlüssel gefunden.", "err_no_input": "⚠️ Bitte Text eingeben oder Datei hochladen.", "success_upload": "Datei geladen!", "err_upload": "Fehler beim Laden der Datei.", "audio_playing": "Audio wird abgespielt..."
+    },
+    "Français": {
+        "header_title": "MediClear AI", "header_subtitle": "Votre traducteur médical personnel",
+        "hero_text": "Le jargon médical est difficile. Nous le simplifions.", "input_label": "Que souhaitez-vous traduire ?",
+        "tab_text": "✍️ Saisir le texte", "tab_file": "📄 Télécharger fichier", "placeholder_text": "Collez le texte du médecin ici...",
+        "upload_help": "Téléchargez un PDF ou une photo.", "btn_analyze": "Expliquer simplement", "btn_processing": "Analyse en cours...",
+        "result_header": "Votre explication simple", "audio_label": "🔊 Lire à haute voix", "chat_header": "Des questions sur cette explication ?",
+        "chat_placeholder": "Demandez par ex. : 'Dois-je m'inquiéter ?'", "footer_disclaimer": "Avis : Outil IA. Consultez un médecin.",
+        "settings_title": "Paramètres", "err_no_api": "⚠️ Aucune clé API Google trouvée.", "err_no_input": "⚠️ Veuillez saisir du texte ou télécharger un fichier.", "success_upload": "Fichier chargé !", "err_upload": "Erreur de chargement.", "audio_playing": "Lecture audio..."
+    },
+    "Español": {
+        "header_title": "MediClear AI", "header_subtitle": "Su traductor médico personal",
+        "hero_text": "La jerga médica es difícil. Nosotros la simplificamos.", "input_label": "¿Qué desea traducir?",
+        "tab_text": "✍️ Escribir texto", "tab_file": "📄 Subir archivo", "placeholder_text": "Pegue el texto del médico aquí...",
+        "upload_help": "Suba un PDF o foto.", "btn_analyze": "Explicar simplemente", "btn_processing": "Analizando...",
+        "result_header": "Su explicación simple", "audio_label": "🔊 Leer en voz alta", "chat_header": "¿Tiene preguntas sobre esta explicación?",
+        "chat_placeholder": "Pregunte ej.: '¿Debo preocuparme?'", "footer_disclaimer": "Nota: Herramienta IA. Consulte a un médico.",
+        "settings_title": "Ajustes", "err_no_api": "⚠️ No se encontró clave API de Google.", "err_no_input": "⚠️ Por favor ingrese texto o suba un archivo.", "success_upload": "¡Archivo cargado!", "err_upload": "Error al cargar el archivo.", "audio_playing": "Reproduciendo audio..."
+    }
+}
