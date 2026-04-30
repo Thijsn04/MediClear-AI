@@ -1,0 +1,32 @@
+# ════════════════════════════════════════════════════════════
+# MediClear AI — Docker Compose
+#
+# Quick start:
+#   cp .env.example .env   # edit with your API key & provider
+#   docker compose up -d
+#   open http://localhost:8000
+# ════════════════════════════════════════════════════════════
+
+services:
+  mediclear:
+    build: .
+    image: mediclear-ai:latest
+    container_name: mediclear-ai
+    restart: unless-stopped
+    ports:
+      - "${PORT:-8000}:8000"
+    env_file:
+      - .env
+    environment:
+      - HOST=0.0.0.0
+      - PORT=8000
+    healthcheck:
+      test: ["CMD", "python", "-c",
+             "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    # Uncomment to persist logs
+    # volumes:
+    #   - ./logs:/app/logs
