@@ -89,9 +89,11 @@ def create_app() -> FastAPI:
         """Return all UI string translations for the frontend."""
         return _JSONResponse(content=TRANSLATIONS)
 
-    # ── Static frontend ───────────────────────────────────────────────────────
-    if _STATIC_DIR.exists():
+    # ── Static frontend (only when ENABLE_FRONTEND=true) ─────────────────────
+    if settings.enable_frontend and _STATIC_DIR.exists():
         app.mount("/", StaticFiles(directory=str(_STATIC_DIR), html=True), name="static")
+    elif not settings.enable_frontend:
+        logger.info("mediclear.frontend_disabled")
 
     return app
 

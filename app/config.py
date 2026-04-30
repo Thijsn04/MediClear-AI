@@ -78,6 +78,13 @@ class Settings(BaseSettings):
     # ── Upload limits ─────────────────────────────────────────────────────────
     max_upload_size_mb: int = Field(default=10, alias="MAX_UPLOAD_SIZE_MB")
 
+    # ── Frontend ──────────────────────────────────────────────────────────────
+    # Set ENABLE_FRONTEND=false to run as a pure REST API server with no UI.
+    # Useful when the HTML frontend is hosted separately (e.g. CDN, Nginx) or
+    # when you only need the API for programmatic access.
+    # When false, GET / returns a 404 and no static files are served.
+    enable_frontend: bool = Field(default=True, alias="ENABLE_FRONTEND")
+
     # ── CORS ──────────────────────────────────────────────────────────────────
     # In production, restrict to your frontend origin, e.g. "https://mediclear.example.com"
     allowed_origins: list[str] = Field(default=["*"], alias="ALLOWED_ORIGINS")

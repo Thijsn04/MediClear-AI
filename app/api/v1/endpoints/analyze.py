@@ -8,11 +8,23 @@ from fastapi import APIRouter, Depends, File, Form, UploadFile
 
 from app.core.exceptions import DocumentProcessingError
 from app.dependencies import get_ai_service, get_document_service
-from app.models.schemas import AnalyzeResponse
+from app.models.schemas import AnalyzeResponse, SUPPORTED_LANGUAGES
 from app.services.ai_service import AIService
 from app.services.document_service import DocumentService
 
 router = APIRouter()
+
+
+def _validate_language(language: str) -> str:
+    """Validate language code from Form data (Pydantic validators don't run on Form fields)."""
+    if language not in SUPPORTED_LANGUAGES:
+        from fastapi import HTTPException
+        raise HTTPException(
+            status_code=422,
+            detail=f"Unsupported language code '{language}'. "
+                   f"Supported codes: {', '.join(SUPPORTED_LANGUAGES)}.",
+        )
+    return language
 
 
 @router.post(
@@ -45,6 +57,8 @@ async def analyze(
     ai_service: AIService = Depends(get_ai_service),
     document_service: DocumentService = Depends(get_document_service),
 ) -> AnalyzeResponse:
+    language = _validate_language(language)
+
     if file is not None:
         content = await file.read()
         document = document_service.process_upload(

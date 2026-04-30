@@ -7,6 +7,7 @@ __pycache__/
 *.egg-info/
 dist/
 build/
+.eggs/
 
 # Virtual Environments
 .env
@@ -22,12 +23,14 @@ ENV/
 *.swo
 *~
 
-# Streamlit
-.streamlit/
-
 # Testing
 .pytest_cache/
+.coverage
+htmlcov/
 
 # OS
 .DS_Store
 Thumbs.db
+
+# Docker
+.dockerignore
