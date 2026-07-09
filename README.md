@@ -1,12 +1,17 @@
-# MediClear AI
+<div align="center">
 
-**Enterprise-grade medical document simplification for hospitals and clinics.**
+# 💬 MediClear AI
 
-MediClear AI is a free, open-source FastAPI application that translates complex clinical language into simple, patient-friendly explanations. Deployable on any infrastructure — from a hospital's private on-premises server to a public cloud — with full support for the AI model of your choice.
+**Enterprise-grade medical document simplification for hospitals and clinics**
+
+A free, open-source FastAPI application that translates complex clinical language into simple, patient-friendly explanations (B1 level). Deployable on any infrastructure — from a hospital's private on-premises server to a public cloud — with full support for the AI model of your choice.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue)](https://www.python.org)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.115%2B-009688)](https://fastapi.tiangolo.com)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.115%2B-009688.svg?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
+[![Google Gemini](https://img.shields.io/badge/AI-Gemini%202.5-8E75B2.svg?logo=googlegemini&logoColor=white)](https://ai.google.dev/)
+
+</div>
 
 ---
 
@@ -336,3 +341,10 @@ MIT — see [LICENSE](LICENSE).
 ---
 
 > **Medical disclaimer:** MediClear AI is an educational tool. It does not constitute medical advice and must not be used as a substitute for consultation with a qualified healthcare professional. Always refer medical decisions to a licensed clinician.
+
+
+---
+
+<div align="center">
+<sub>Built by <a href="https://github.com/Thijsn04">Thijs Nannings</a> · Medical Informatics @ UvA · <a href="https://lythos.nl">Lythos</a></sub>
+</div>
