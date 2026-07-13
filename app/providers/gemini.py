@@ -67,7 +67,7 @@ class GeminiProvider(BaseAIProvider):
         return genai.GenerativeModel(
             self._model,
             system_instruction=system,
-            generation_config=generation_config,
+            generation_config=generation_config,  # type: ignore[arg-type]
         )
 
     @staticmethod

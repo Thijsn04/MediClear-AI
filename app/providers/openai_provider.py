@@ -9,6 +9,7 @@ set freely via OPENAI_MODEL - nothing is hardcoded.
 from __future__ import annotations
 
 from collections.abc import AsyncIterator
+from typing import Any
 
 from app.core.exceptions import AIProviderError, AIProviderNotConfiguredError
 from app.core.logging import get_logger
@@ -24,7 +25,7 @@ class OpenAIProvider(BaseAIProvider):
         self._api_key = api_key
         self._model = model
         self._base_url = base_url or None
-        self._client = None
+        self._client: Any = None
 
     @property
     def name(self) -> str:

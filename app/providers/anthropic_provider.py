@@ -8,6 +8,7 @@ Claude 3 and later.
 from __future__ import annotations
 
 from collections.abc import AsyncIterator
+from typing import Any
 
 from app.core.exceptions import AIProviderError, AIProviderNotConfiguredError
 from app.core.logging import get_logger
@@ -22,7 +23,7 @@ class AnthropicProvider(BaseAIProvider):
     def __init__(self, api_key: str, model: str) -> None:
         self._api_key = api_key
         self._model = model
-        self._client = None
+        self._client: Any = None
 
     @property
     def name(self) -> str:
