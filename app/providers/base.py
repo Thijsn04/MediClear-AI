@@ -16,11 +16,9 @@ import json
 from abc import ABC, abstractmethod
 from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
-from typing import Optional
 
 from app.models.analysis import StructuredAnalysis
 from app.providers.prompts import build_analysis_prompt, build_chat_prompt
-
 
 # ---------------------------------------------------------------------------
 # Transport-level data structures shared by every provider
@@ -41,7 +39,7 @@ class Message:
 
     role: str  # "system" | "user" | "assistant"
     text: str = ""
-    image: Optional[ImagePart] = None
+    image: ImagePart | None = None
 
 
 @dataclass
@@ -49,9 +47,9 @@ class ProcessedDocument:
     """Normalised user content produced by DocumentService."""
 
     type: str  # "text" | "image"
-    text: Optional[str] = None
-    image: Optional[ImagePart] = None
-    filename: Optional[str] = None
+    text: str | None = None
+    image: ImagePart | None = None
+    filename: str | None = None
 
 
 @dataclass
@@ -195,7 +193,7 @@ class BaseAIProvider(ABC):
         target_level: str,
         max_tokens: int,
         temperature: float,
-        source_text: Optional[str] = None,
+        source_text: str | None = None,
     ) -> StructuredAnalysis:
         """Ask the model to rewrite an over-complex explanation more simply."""
         system = build_analysis_prompt(
@@ -232,9 +230,7 @@ class BaseAIProvider(ABC):
         temperature: float,
     ) -> str:
         """Answer a follow-up question grounded in the original document."""
-        system = build_chat_prompt(
-            document_context=document_context, language_name=language_name
-        )
+        system = build_chat_prompt(document_context=document_context, language_name=language_name)
         messages = [Message(role=m.role, text=m.content) for m in history]
         messages.append(Message(role="user", text=message))
 
@@ -258,9 +254,7 @@ class BaseAIProvider(ABC):
         temperature: float,
     ) -> AsyncIterator[str]:
         """Stream a follow-up answer token-by-token."""
-        system = build_chat_prompt(
-            document_context=document_context, language_name=language_name
-        )
+        system = build_chat_prompt(document_context=document_context, language_name=language_name)
         messages = [Message(role=m.role, text=m.content) for m in history]
         messages.append(Message(role="user", text=message))
 
@@ -310,7 +304,7 @@ class BaseAIProvider(ABC):
             term.found_in_source = term.term.lower() in haystack
 
 
-def _extract_json_object(text: str) -> Optional[dict]:
+def _extract_json_object(text: str) -> dict | None:
     """Best-effort extraction of a single JSON object from model output."""
     text = text.strip()
     if text.startswith("```"):

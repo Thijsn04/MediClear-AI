@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Annotated, Optional
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 
@@ -12,7 +12,7 @@ from app.core.exceptions import DocumentProcessingError
 from app.core.logging import get_logger
 from app.dependencies import get_ai_service, get_document_service
 from app.models.languages import is_supported
-from app.models.schemas import AnalyzeResponse, SUPPORTED_LANGUAGES
+from app.models.schemas import SUPPORTED_LANGUAGES, AnalyzeResponse
 from app.services.ai_service import AIService
 from app.services.document_service import DocumentService
 
@@ -47,9 +47,9 @@ def _validate_language(language: str) -> str:
 )
 async def analyze(
     language: Annotated[str, Form()] = "en",
-    text: Annotated[Optional[str], Form()] = None,
-    file: Annotated[Optional[UploadFile], File()] = None,
-    reading_level: Annotated[Optional[str], Form()] = None,
+    text: Annotated[str | None, Form()] = None,
+    file: Annotated[UploadFile | None, File()] = None,
+    reading_level: Annotated[str | None, Form()] = None,
     ai_service: AIService = Depends(get_ai_service),
     document_service: DocumentService = Depends(get_document_service),
     identity: str = Depends(rate_limited_identity),

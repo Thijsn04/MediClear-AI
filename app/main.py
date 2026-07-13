@@ -81,20 +81,17 @@ def create_app() -> FastAPI:
         async def _metrics_mw(request: Request, call_next):
             start = time.perf_counter()
             response = await call_next(request)
+            route = request.scope.get("route")
+            path = getattr(route, "path", None) or request.url.path
             metrics.record_request(
-                request.method,
-                request.scope.get("route").path if request.scope.get("route") else request.url.path,
-                response.status_code,
-                time.perf_counter() - start,
+                request.method, path, response.status_code, time.perf_counter() - start
             )
             return response
 
     # ── Exception handlers (unified envelope) ─────────────────────────────────
     @app.exception_handler(MediClearException)
     async def _mediclear_handler(request: Request, exc: MediClearException) -> JSONResponse:
-        logger.warning(
-            "mediclear.exception", status_code=exc.status_code, message=exc.message
-        )
+        logger.warning("mediclear.exception", status_code=exc.status_code, message=exc.message)
         headers = {}
         if isinstance(exc, RateLimitError):
             headers["Retry-After"] = str(exc.retry_after)
@@ -109,9 +106,7 @@ def create_app() -> FastAPI:
         )
 
     @app.exception_handler(RequestValidationError)
-    async def _validation_handler(
-        request: Request, exc: RequestValidationError
-    ) -> JSONResponse:
+    async def _validation_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
         return JSONResponse(
             status_code=422,
             content={

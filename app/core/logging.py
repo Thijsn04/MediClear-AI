@@ -24,6 +24,7 @@ def configure_logging() -> None:
         structlog.processors.format_exc_info,
     ]
 
+    renderer: object
     if settings.debug:
         renderer = structlog.dev.ConsoleRenderer(colors=True)
     else:

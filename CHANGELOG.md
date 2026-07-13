@@ -6,6 +6,56 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [3.0.0] — 2026-07-13
+
+State-of-the-art overhaul: structured output, an API-first platform, clarification
+quality tooling, resilience, privacy controls, and full CI.
+
+### Added
+
+- **Structured analysis output** — `/analyze` returns a typed `StructuredAnalysis`
+  (document type, summary, explanation, key terms, action items, lab values,
+  medications, readability) **plus** a rendered markdown convenience field.
+- **Faithfulness grounding** — key terms not present in the source document are
+  flagged (`found_in_source`).
+- **Readability scoring & enforcement** — Flesch/CEFR estimate with an optional
+  re-simplification pass toward a configurable target level (A2/B1/B2).
+- **SSE streaming chat** at `/chat/{session_id}/stream`; grounded follow-ups now
+  use the *source document*, not just the AI summary.
+- **API-key authentication** and **per-identity rate limiting** (memory or Redis)
+  with `Retry-After`.
+- **Pluggable Redis backends** for sessions, result cache, and rate limiting.
+- **Result caching** to avoid re-billing identical requests.
+- **Provider resilience** — per-call timeout, retries with backoff, ordered
+  failover (`AI_FALLBACK_PROVIDERS`).
+- **Privacy controls** — `ZERO_RETENTION` mode and audit logging (metadata only).
+- **Session endpoints** — `GET`/`DELETE /sessions/{id}`.
+- **Observability** — Prometheus `/metrics`, request IDs, unified error envelope.
+- **OCR fallback** for scanned PDFs; WEBP support; two more languages (uk, fa).
+- **Text-to-speech backends** — cloud (gTTS) and offline (`local`), selectable.
+- **CI** (ruff + ruff format + mypy + pytest/coverage + Docker build), install
+  extras, `.dockerignore`, `SECURITY.md`, `CODE_OF_CONDUCT.md`, issue/PR templates,
+  and `docs/` (configuration, architecture, API).
+
+### Changed
+
+- **Thin provider contract** — providers implement one `_complete`/`_stream`
+  primitive; prompt-building, JSON parsing, and grounding live once in the base.
+- **Non-blocking Gemini** — synchronous SDK calls now run in a worker thread
+  instead of blocking the event loop.
+- **Frontend renders structured data directly** (no markdown parser, no CDNs) —
+  works offline/air-gapped and closes the XSS vector.
+- **Corrected CORS** — credentials disabled while origins are the wildcard.
+- **Single-source version** (`app/version.py`); AI SDKs are now optional extras.
+
+### Fixed
+
+- Upload size is enforced **before** the body is buffered (memory-DoS hole).
+- Health check now reports `unhealthy` when the session store is unreachable.
+- Broken `pyproject.toml` build backend (`setuptools.build_meta`).
+
+---
+
 ## [2.0.0] — 2026-04-30
 
 Complete rewrite from a Streamlit prototype to an enterprise-grade FastAPI application.

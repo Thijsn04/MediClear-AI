@@ -15,7 +15,6 @@ from __future__ import annotations
 
 import base64
 import io
-from typing import Optional
 
 from app.core.exceptions import (
     DocumentProcessingError,
@@ -44,7 +43,7 @@ class DocumentService:
         self,
         content: bytes,
         content_type: str,
-        filename: Optional[str] = None,
+        filename: str | None = None,
     ) -> ProcessedDocument:
         mime = content_type.split(";")[0].strip().lower()
         if mime == "image/jpg":
@@ -63,23 +62,20 @@ class DocumentService:
 
     # ------------------------------------------------------------------
 
-    def _process_pdf(self, content: bytes, filename: Optional[str]) -> ProcessedDocument:
+    def _process_pdf(self, content: bytes, filename: str | None) -> ProcessedDocument:
         try:
             from pypdf import PdfReader
 
             reader = PdfReader(io.BytesIO(content))
             pages = [
-                extracted.strip()
-                for page in reader.pages
-                if (extracted := page.extract_text())
+                extracted.strip() for page in reader.pages if (extracted := page.extract_text())
             ]
             text = "\n\n".join(pages)
         except DocumentProcessingError:
             raise
         except Exception as exc:  # noqa: BLE001
             raise DocumentProcessingError(
-                f"Failed to read PDF: {exc}. Ensure it is a valid, "
-                "non-password-protected PDF."
+                f"Failed to read PDF: {exc}. Ensure it is a valid, non-password-protected PDF."
             ) from exc
 
         if text.strip():
@@ -99,7 +95,7 @@ class DocumentService:
             "document instead — it will be read by a vision model."
         )
 
-    def _ocr_pdf(self, content: bytes) -> Optional[str]:
+    def _ocr_pdf(self, content: bytes) -> str | None:
         """Best-effort OCR of a scanned PDF. Returns None if OCR deps are absent."""
         try:
             import pytesseract  # type: ignore[import-untyped]
@@ -115,9 +111,7 @@ class DocumentService:
             return None
 
     @staticmethod
-    def _process_image(
-        content: bytes, mime: str, filename: Optional[str]
-    ) -> ProcessedDocument:
+    def _process_image(content: bytes, mime: str, filename: str | None) -> ProcessedDocument:
         try:
             from PIL import Image
 

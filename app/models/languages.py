@@ -14,11 +14,11 @@ from dataclasses import dataclass
 
 @dataclass(frozen=True)
 class Language:
-    code: str          # BCP 47 short code, e.g. "en"
-    native_name: str   # endonym shown in UI, e.g. "Nederlands"
+    code: str  # BCP 47 short code, e.g. "en"
+    native_name: str  # endonym shown in UI, e.g. "Nederlands"
     english_name: str  # used in prompts, e.g. "Dutch"
-    rtl: bool          # right-to-left script
-    tts_code: str      # language tag for the TTS backend
+    rtl: bool  # right-to-left script
+    tts_code: str  # language tag for the TTS backend
 
 
 _LANGUAGES: tuple[Language, ...] = (
@@ -44,9 +44,7 @@ _LANGUAGES: tuple[Language, ...] = (
 LANGUAGES: dict[str, Language] = {lang.code: lang for lang in _LANGUAGES}
 
 # Backwards-compatible mapping used throughout the app: code -> native name.
-SUPPORTED_LANGUAGES: dict[str, str] = {
-    lang.code: lang.native_name for lang in _LANGUAGES
-}
+SUPPORTED_LANGUAGES: dict[str, str] = {lang.code: lang.native_name for lang in _LANGUAGES}
 
 
 def get_language(code: str) -> Language:

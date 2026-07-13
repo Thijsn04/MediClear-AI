@@ -12,13 +12,11 @@ from app.config import Settings, get_settings
 from app.dependencies import (
     get_ai_service,
     get_document_service,
-    get_rate_limiter,
-    get_result_cache,
     get_session_store,
     get_tts_service,
 )
 from app.main import create_app
-from app.providers.base import BaseAIProvider, Completion, Message
+from app.providers.base import BaseAIProvider, Completion
 from app.services.ai_service import AIService
 from app.services.cache import InMemoryCache, ResultCache
 from app.services.document_service import DocumentService
@@ -56,18 +54,14 @@ class MockProvider(BaseAIProvider):
                 "document_type": "other",
                 "summary": "This is a simple summary.",
                 "explanation": "This is a clear and simple explanation for the patient.",
-                "key_terms": [
-                    {"term": "hypertension", "definition": "high blood pressure"}
-                ],
+                "key_terms": [{"term": "hypertension", "definition": "high blood pressure"}],
                 "action_items": ["Talk to your doctor."],
             }
             return Completion(text=json.dumps(payload), input_tokens=10, output_tokens=20)
         last = messages[-1].text if messages else ""
         return Completion(text=f"Test answer to: {last}", input_tokens=5, output_tokens=8)
 
-    async def _stream(
-        self, *, system, messages, max_tokens, temperature
-    ) -> AsyncIterator[str]:
+    async def _stream(self, *, system, messages, max_tokens, temperature) -> AsyncIterator[str]:
         last = messages[-1].text if messages else ""
         for token in f"Test answer to: {last}".split():
             yield token + " "

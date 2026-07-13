@@ -19,7 +19,6 @@ import time
 import uuid
 from abc import ABC, abstractmethod
 from dataclasses import asdict, dataclass, field
-from typing import Optional
 
 from app.core.exceptions import SessionNotFoundError
 from app.core.logging import get_logger
@@ -51,7 +50,7 @@ class ChatSession:
         return json.dumps(data)
 
     @classmethod
-    def from_json(cls, raw: str) -> "ChatSession":
+    def from_json(cls, raw: str) -> ChatSession:
         data = json.loads(raw)
         data["history"] = [ConversationMessage(**m) for m in data.get("history", [])]
         return cls(**data)
@@ -69,7 +68,7 @@ class SessionStore(ABC):
         language: str,
         language_name: str,
         document_context: str,
-        initial_history: Optional[list[ConversationMessage]] = None,
+        initial_history: list[ConversationMessage] | None = None,
     ) -> ChatSession: ...
 
     @abstractmethod
@@ -102,7 +101,7 @@ class InMemorySessionStore(SessionStore):
         language: str,
         language_name: str,
         document_context: str,
-        initial_history: Optional[list[ConversationMessage]] = None,
+        initial_history: list[ConversationMessage] | None = None,
     ) -> ChatSession:
         self._evict_expired()
         if len(self._store) >= self._max_sessions:
@@ -172,7 +171,7 @@ class RedisSessionStore(SessionStore):
         language: str,
         language_name: str,
         document_context: str,
-        initial_history: Optional[list[ConversationMessage]] = None,
+        initial_history: list[ConversationMessage] | None = None,
     ) -> ChatSession:
         session = ChatSession(
             id=str(uuid.uuid4()),

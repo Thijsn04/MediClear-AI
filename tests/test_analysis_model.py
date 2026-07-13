@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
-
 from app.models.analysis import DocumentType, KeyTerm, LabValue, StructuredAnalysis
 from app.providers.base import BaseAIProvider
 

@@ -2,17 +2,16 @@
 
 from __future__ import annotations
 
-import pytest
 from fastapi.testclient import TestClient
 
 from app.config import Settings, get_settings
+from app.core.rate_limit import InMemoryRateLimiter
 from app.dependencies import (
     get_ai_service,
     get_document_service,
     get_rate_limiter,
     get_session_store,
 )
-from app.core.rate_limit import InMemoryRateLimiter
 from app.main import create_app
 from app.services.document_service import DocumentService
 
@@ -37,7 +36,10 @@ def test_missing_api_key_rejected(ai_service, session_store) -> None:
         rate_limit_enabled=False,
     )
     client = _client(settings, ai_service, session_store)
-    resp = client.post("/api/v1/analyze", data={"text": "Patient has a fever today.", "language": "en"})
+    resp = client.post(
+        "/api/v1/analyze",
+        data={"text": "Patient has a fever today.", "language": "en"},
+    )
     assert resp.status_code == 401
 
 

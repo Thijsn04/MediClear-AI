@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, Response
 
@@ -32,7 +32,7 @@ async def get_session(
         model=session.model,
         language=session.language,
         message_count=len(session.history),
-        created_at=datetime.fromtimestamp(session.created_at, tz=timezone.utc),
+        created_at=datetime.fromtimestamp(session.created_at, tz=UTC),
     )
 
 

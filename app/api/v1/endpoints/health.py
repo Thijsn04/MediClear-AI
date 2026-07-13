@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
+from typing import Literal
 
 from fastapi import APIRouter, Depends
 
@@ -40,6 +41,7 @@ async def health_check(
     store_kind = "redis" if isinstance(session_store, RedisSessionStore) else "memory"
     active = await session_store.count() if store_ok else 0
 
+    status: Literal["healthy", "degraded", "unhealthy"]
     if not store_ok:
         status = "unhealthy"
     elif not configured:
@@ -56,5 +58,5 @@ async def health_check(
         ai_provider_reachable=None,
         session_store=store_kind,
         active_sessions=active,
-        timestamp=datetime.now(timezone.utc),
+        timestamp=datetime.now(UTC),
     )

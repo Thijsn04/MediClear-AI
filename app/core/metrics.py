@@ -36,9 +36,7 @@ if _AVAILABLE:
     ANALYSES = Counter(
         "mediclear_analyses_total", "Total document analyses", ["provider", "cached"]
     )
-    TOKENS = Counter(
-        "mediclear_tokens_total", "AI tokens consumed", ["provider", "direction"]
-    )
+    TOKENS = Counter("mediclear_tokens_total", "AI tokens consumed", ["provider", "direction"])
 
 
 def is_available() -> bool:

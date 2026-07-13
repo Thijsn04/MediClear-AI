@@ -14,7 +14,7 @@ import hashlib
 import json
 import time
 from collections import OrderedDict
-from typing import Optional, Protocol
+from typing import Protocol
 
 from app.core.logging import get_logger
 from app.models.analysis import StructuredAnalysis
@@ -28,7 +28,7 @@ def make_key(*parts: str) -> str:
 
 
 class CacheBackend(Protocol):
-    async def get(self, key: str) -> Optional[str]: ...
+    async def get(self, key: str) -> str | None: ...
     async def set(self, key: str, value: str, ttl_seconds: int) -> None: ...
 
 
@@ -39,7 +39,7 @@ class InMemoryCache:
         self._store: OrderedDict[str, tuple[float, str]] = OrderedDict()
         self._max = max_entries
 
-    async def get(self, key: str) -> Optional[str]:
+    async def get(self, key: str) -> str | None:
         entry = self._store.get(key)
         if entry is None:
             return None
@@ -63,7 +63,7 @@ class RedisCache:
     def __init__(self, client) -> None:
         self._redis = client
 
-    async def get(self, key: str) -> Optional[str]:
+    async def get(self, key: str) -> str | None:
         value = await self._redis.get(key)
         return value.decode() if isinstance(value, bytes) else value
 
@@ -79,7 +79,7 @@ class ResultCache:
         self._ttl = ttl_seconds
         self._enabled = enabled
 
-    async def get(self, key: str) -> Optional[StructuredAnalysis]:
+    async def get(self, key: str) -> StructuredAnalysis | None:
         if not self._enabled:
             return None
         raw = await self._backend.get(key)

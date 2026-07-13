@@ -9,7 +9,7 @@ structured fields while simple clients can display the markdown directly.
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Literal, Optional
+from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -47,7 +47,7 @@ def _validate_language(v: str) -> str:
 class AnalyzeTextRequest(BaseModel):
     text: str = Field(..., min_length=10, max_length=100_000)
     language: str = Field(default="en")
-    reading_level: Optional[Literal["A2", "B1", "B2"]] = Field(default=None)
+    reading_level: Literal["A2", "B1", "B2"] | None = Field(default=None)
 
     @field_validator("language")
     @classmethod
@@ -79,7 +79,7 @@ class AudioRequest(BaseModel):
 
 
 class AnalyzeResponse(BaseModel):
-    session_id: Optional[str] = Field(
+    session_id: str | None = Field(
         default=None,
         description="Session id for follow-up chat. Null in zero-retention mode.",
     )
@@ -104,7 +104,7 @@ class HealthResponse(BaseModel):
     ai_provider: str
     ai_model: str
     ai_provider_configured: bool
-    ai_provider_reachable: Optional[bool] = None
+    ai_provider_reachable: bool | None = None
     session_store: str
     active_sessions: int
     timestamp: datetime
@@ -133,4 +133,4 @@ class SessionResponse(BaseModel):
 class ErrorResponse(BaseModel):
     error: str
     status_code: int
-    request_id: Optional[str] = None
+    request_id: str | None = None

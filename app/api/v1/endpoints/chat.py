@@ -51,8 +51,8 @@ async def chat(
     summary="Ask a follow-up question (streaming)",
     description=(
         "Same as `/chat/{session_id}` but streams the answer as Server-Sent "
-        "Events. Each event is `data: {\"delta\": \"...\"}`; the stream ends "
-        "with `data: {\"done\": true}`."
+        'Events. Each event is `data: {"delta": "..."}`; the stream ends '
+        'with `data: {"done": true}`.'
     ),
     tags=["Chat"],
 )

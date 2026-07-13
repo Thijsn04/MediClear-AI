@@ -80,9 +80,7 @@ def get_rate_limiter() -> RateLimiter:
         return RedisRateLimiter(
             redis, settings.rate_limit_requests, settings.rate_limit_window_seconds
         )
-    return InMemoryRateLimiter(
-        settings.rate_limit_requests, settings.rate_limit_window_seconds
-    )
+    return InMemoryRateLimiter(settings.rate_limit_requests, settings.rate_limit_window_seconds)
 
 
 @lru_cache

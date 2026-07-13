@@ -36,11 +36,7 @@ def flesch_reading_ease(text: str) -> float | None:
     num_words = len(words)
     num_sentences = max(1, len(sentences))
     num_syllables = sum(_count_syllables(w) for w in words)
-    score = (
-        206.835
-        - 1.015 * (num_words / num_sentences)
-        - 84.6 * (num_syllables / num_words)
-    )
+    score = 206.835 - 1.015 * (num_words / num_sentences) - 84.6 * (num_syllables / num_words)
     return round(max(0.0, min(100.0, score)), 1)
 
 

@@ -13,8 +13,8 @@ and the follow-up chat pipeline (grounded in the stored document context).
 from __future__ import annotations
 
 import hashlib
+from collections.abc import AsyncIterator
 from dataclasses import dataclass
-from typing import AsyncIterator, Optional
 
 from app.config import Settings
 from app.core.exceptions import ChatDisabledError
@@ -32,7 +32,7 @@ logger = get_logger(__name__)
 @dataclass
 class AnalysisOutcome:
     analysis: StructuredAnalysis
-    session_id: Optional[str]
+    session_id: str | None
     provider: str
     model: str
     cached: bool
@@ -69,7 +69,7 @@ class AIService:
         self,
         document: ProcessedDocument,
         language: str,
-        target_level: Optional[str] = None,
+        target_level: str | None = None,
     ) -> AnalysisOutcome:
         target_level = target_level or self._settings.target_reading_level
         language_name = get_language(language).english_name
@@ -127,9 +127,7 @@ class AIService:
             return analysis
         passes = self._settings.max_simplification_passes
         for _ in range(max(0, passes)):
-            score = readability_mod.assess(
-                analysis.explanation or analysis.summary, target_level
-            )
+            score = readability_mod.assess(analysis.explanation or analysis.summary, target_level)
             if score.meets_target is not False:
                 break
             logger.info(
@@ -153,7 +151,7 @@ class AIService:
         analysis: StructuredAnalysis,
         language: str,
         language_name: str,
-    ) -> Optional[str]:
+    ) -> str | None:
         if self._settings.zero_retention:
             return None
         # Ground follow-up chat in the source text when we have it, else the
@@ -191,9 +189,7 @@ class AIService:
         await self._sessions.append_message(session_id, "assistant", response_text)
         return response_text
 
-    async def stream_chat(
-        self, session_id: str, message: str, language: str
-    ) -> AsyncIterator[str]:
+    async def stream_chat(self, session_id: str, message: str, language: str) -> AsyncIterator[str]:
         if self._settings.zero_retention:
             raise ChatDisabledError()
         session = await self._sessions.get(session_id)
@@ -224,7 +220,7 @@ class AIService:
 
     def _cache_key(
         self, document: ProcessedDocument, language: str, target_level: str
-    ) -> Optional[str]:
+    ) -> str | None:
         if not self._settings.cache_enabled:
             return None
         if document.type == "text" and document.text:

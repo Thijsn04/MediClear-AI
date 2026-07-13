@@ -51,9 +51,7 @@ class Settings(BaseSettings):
     port: int = 8000
     # Maximum accepted request body in bytes (defends the event loop / memory
     # before the upload is ever buffered). Applies to multipart uploads too.
-    max_request_body_bytes: int = Field(
-        default=12 * 1024 * 1024, alias="MAX_REQUEST_BODY_BYTES"
-    )
+    max_request_body_bytes: int = Field(default=12 * 1024 * 1024, alias="MAX_REQUEST_BODY_BYTES")
 
     # ── AI Provider selection ─────────────────────────────────────────────────
     # gemini | openai | anthropic. For OpenAI-compatible servers (Ollama, Azure,
@@ -63,13 +61,9 @@ class Settings(BaseSettings):
     )
     # Optional ordered fallback chain, e.g. "openai,anthropic". If the primary
     # provider fails after retries, these are tried in order. Empty = no fallback.
-    ai_fallback_providers: list[str] = Field(
-        default_factory=list, alias="AI_FALLBACK_PROVIDERS"
-    )
+    ai_fallback_providers: list[str] = Field(default_factory=list, alias="AI_FALLBACK_PROVIDERS")
     # Per-call resilience.
-    ai_request_timeout_seconds: float = Field(
-        default=60.0, alias="AI_REQUEST_TIMEOUT_SECONDS"
-    )
+    ai_request_timeout_seconds: float = Field(default=60.0, alias="AI_REQUEST_TIMEOUT_SECONDS")
     ai_max_retries: int = Field(default=2, alias="AI_MAX_RETRIES")
     ai_max_output_tokens: int = Field(default=4096, alias="AI_MAX_OUTPUT_TOKENS")
     ai_temperature: float = Field(default=0.2, alias="AI_TEMPERATURE")
@@ -94,9 +88,7 @@ class Settings(BaseSettings):
         default="B1", alias="TARGET_READING_LEVEL"
     )
     enforce_reading_level: bool = Field(default=True, alias="ENFORCE_READING_LEVEL")
-    max_simplification_passes: int = Field(
-        default=1, alias="MAX_SIMPLIFICATION_PASSES"
-    )
+    max_simplification_passes: int = Field(default=1, alias="MAX_SIMPLIFICATION_PASSES")
 
     # ── Result cache ──────────────────────────────────────────────────────────
     # Identical (document, language, level, model) requests reuse a cached result
@@ -132,9 +124,7 @@ class Settings(BaseSettings):
 
     # ── Text-to-speech ────────────────────────────────────────────────────────
     # gtts (cloud, Google) | local (offline, pyttsx3/espeak) | disabled
-    tts_backend: Literal["gtts", "local", "disabled"] = Field(
-        default="gtts", alias="TTS_BACKEND"
-    )
+    tts_backend: Literal["gtts", "local", "disabled"] = Field(default="gtts", alias="TTS_BACKEND")
 
     # ── Authentication ────────────────────────────────────────────────────────
     # When true, every /api/v1 mutation requires a valid key in the
@@ -147,9 +137,7 @@ class Settings(BaseSettings):
     rate_limit_enabled: bool = Field(default=True, alias="RATE_LIMIT_ENABLED")
     # Requests allowed per window, keyed by API key (or client IP when anon).
     rate_limit_requests: int = Field(default=60, alias="RATE_LIMIT_REQUESTS")
-    rate_limit_window_seconds: int = Field(
-        default=60, alias="RATE_LIMIT_WINDOW_SECONDS"
-    )
+    rate_limit_window_seconds: int = Field(default=60, alias="RATE_LIMIT_WINDOW_SECONDS")
 
     # ── Frontend ──────────────────────────────────────────────────────────────
     enable_frontend: bool = Field(default=True, alias="ENABLE_FRONTEND")

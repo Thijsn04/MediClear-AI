@@ -52,9 +52,7 @@ class LabValue(BaseModel):
     value: str
     unit: str | None = None
     reference_range: str | None = None
-    flag: str | None = Field(
-        default=None, description="e.g. 'high', 'low', 'normal', if stated."
-    )
+    flag: str | None = Field(default=None, description="e.g. 'high', 'low', 'normal', if stated.")
 
 
 class Medication(BaseModel):
@@ -72,9 +70,7 @@ class Readability(BaseModel):
     """Readability assessment of the produced explanation."""
 
     flesch_reading_ease: float | None = None
-    estimated_cefr: str | None = Field(
-        default=None, description="Estimated CEFR level, e.g. 'B1'."
-    )
+    estimated_cefr: str | None = Field(default=None, description="Estimated CEFR level, e.g. 'B1'.")
     target_cefr: str | None = None
     meets_target: bool | None = None
 

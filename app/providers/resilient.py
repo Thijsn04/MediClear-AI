@@ -20,7 +20,7 @@ from collections.abc import AsyncIterator
 
 from app.core.exceptions import AIProviderError
 from app.core.logging import get_logger
-from app.providers.base import BaseAIProvider, Completion, Message
+from app.providers.base import BaseAIProvider, Completion
 
 logger = get_logger(__name__)
 
@@ -86,9 +86,7 @@ class ResilientProvider(BaseAIProvider):
                     if attempt < self._max_retries:
                         await asyncio.sleep(min(2**attempt, 8))
             logger.warning("provider.failover", exhausted=provider.name)
-        raise AIProviderError(
-            f"All providers failed. Last error: {last_exc}"
-        ) from last_exc
+        raise AIProviderError(f"All providers failed. Last error: {last_exc}") from last_exc
 
     async def _stream(self, **kwargs) -> AsyncIterator[str]:  # type: ignore[override]
         # Streaming failover is best-effort: try providers in order, but once a
@@ -106,8 +104,6 @@ class ResilientProvider(BaseAIProvider):
                     return
             except Exception as exc:  # noqa: BLE001
                 last_exc = exc
-                logger.warning(
-                    "provider.stream_failed", provider=provider.name, error=str(exc)
-                )
+                logger.warning("provider.stream_failed", provider=provider.name, error=str(exc))
         if last_exc is not None:
             raise AIProviderError(f"All streaming providers failed: {last_exc}") from last_exc
