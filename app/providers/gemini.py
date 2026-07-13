@@ -1,41 +1,32 @@
 """
 Google Gemini provider.
 
-Model is fully configurable via the GEMINI_MODEL environment variable.
-Any model string accepted by the google-generativeai SDK can be used,
-for example:
-  - gemini-2.5-flash      (fast, cost-effective)
-  - gemini-2.5-pro        (most capable)
-  - gemini-1.5-pro        (stable alternative)
-  - gemini-1.5-flash      (lightweight)
+The google-generativeai SDK is synchronous, so every call is dispatched to a
+worker thread via ``asyncio.to_thread`` — this keeps the async event loop free
+and lets the server handle concurrent requests (the previous implementation
+blocked the loop on every Gemini call).
+
+Model is configurable via GEMINI_MODEL (e.g. gemini-2.5-flash, gemini-2.5-pro).
 """
 
 from __future__ import annotations
 
+import asyncio
 import base64
-from typing import TYPE_CHECKING
 
-from app.core.exceptions import AIProviderError, AIProviderNotConfiguredError, UnsupportedModalityError
+from app.core.exceptions import AIProviderError, AIProviderNotConfiguredError
 from app.core.logging import get_logger
-from app.providers.base import AnalysisResult, BaseAIProvider, ConversationMessage, ProcessedDocument
-from app.providers.prompts import ANALYSIS_SYSTEM_PROMPT, CHAT_SYSTEM_PROMPT
-
-if TYPE_CHECKING:
-    pass
+from app.providers.base import BaseAIProvider, Completion, Message
 
 logger = get_logger(__name__)
 
 
 class GeminiProvider(BaseAIProvider):
-    """Google Gemini provider — supports text and vision models."""
+    """Google Gemini provider — multimodal, non-blocking."""
 
     def __init__(self, api_key: str, model: str) -> None:
         self._api_key = api_key
         self._model = model
-
-    # ------------------------------------------------------------------
-    # Identity
-    # ------------------------------------------------------------------
 
     @property
     def name(self) -> str:
@@ -51,113 +42,75 @@ class GeminiProvider(BaseAIProvider):
 
     @property
     def supports_images(self) -> bool:
-        # All current Gemini Flash/Pro models are multimodal.
         return True
 
     # ------------------------------------------------------------------
-    # Helpers
-    # ------------------------------------------------------------------
 
-    def _get_model(self):  # type: ignore[return]
-        """Lazily import and configure the Gemini SDK."""
+    def _build_model(self, system: str, json_mode: bool, max_tokens: int, temperature: float):
         try:
-            import google.generativeai as genai  # type: ignore[import-untyped]
+            import google.generativeai as genai
         except ImportError as exc:
             raise AIProviderError(
                 "google-generativeai package is not installed. "
-                "Run: pip install google-generativeai"
+                "Run: pip install 'mediclear-ai[gemini]'"
             ) from exc
-
         if not self.is_configured:
             raise AIProviderNotConfiguredError(self.name)
 
         genai.configure(api_key=self._api_key)
-        return genai.GenerativeModel(self._model)
+        generation_config: dict = {
+            "max_output_tokens": max_tokens,
+            "temperature": temperature,
+        }
+        if json_mode:
+            generation_config["response_mime_type"] = "application/json"
+        return genai.GenerativeModel(
+            self._model,
+            system_instruction=system,
+            generation_config=generation_config,
+        )
 
-    # ------------------------------------------------------------------
-    # Core operations
-    # ------------------------------------------------------------------
+    @staticmethod
+    def _to_gemini_contents(messages: list[Message]) -> list[dict]:
+        contents: list[dict] = []
+        for m in messages:
+            role = "model" if m.role == "assistant" else "user"
+            parts: list = []
+            if m.text:
+                parts.append(m.text)
+            if m.image is not None:
+                parts.append(
+                    {
+                        "mime_type": m.image.media_type,
+                        "data": base64.b64decode(m.image.b64_data),
+                    }
+                )
+            contents.append({"role": role, "parts": parts})
+        return contents
 
-    async def analyze_document(
+    async def _complete(
         self,
-        document: ProcessedDocument,
-        language_name: str,
-    ) -> AnalysisResult:
-        if not self.is_configured:
-            raise AIProviderNotConfiguredError(self.name)
-
-        model_obj = self._get_model()
-
-        system_prompt = ANALYSIS_SYSTEM_PROMPT.format(language_name=language_name)
-        parts: list = [system_prompt]
-
-        if document.type == "text":
-            parts.append(f"MEDICAL DOCUMENT:\n{document.text}")
-        elif document.type == "image":
-            if not self.supports_images:
-                raise UnsupportedModalityError(self.name, "image")
-            try:
-                import google.generativeai as genai  # type: ignore[import-untyped]
-
-                image_data = base64.b64decode(document.image_bytes)  # type: ignore[arg-type]
-                image_part = {
-                    "mime_type": document.image_media_type or "image/jpeg",
-                    "data": image_data,
-                }
-                parts.append("ANALYSE THIS MEDICAL IMAGE:")
-                parts.append(image_part)
-            except Exception as exc:
-                raise AIProviderError(f"Failed to prepare image for Gemini: {exc}") from exc
-        else:
-            raise AIProviderError(f"Unknown document type: {document.type}")
+        *,
+        system: str,
+        messages: list[Message],
+        max_tokens: int,
+        temperature: float,
+        json_mode: bool,
+    ) -> Completion:
+        def _run() -> Completion:
+            model_obj = self._build_model(system, json_mode, max_tokens, temperature)
+            resp = model_obj.generate_content(self._to_gemini_contents(messages))
+            usage = getattr(resp, "usage_metadata", None)
+            return Completion(
+                text=resp.text,
+                input_tokens=getattr(usage, "prompt_token_count", 0) or 0,
+                output_tokens=getattr(usage, "candidates_token_count", 0) or 0,
+            )
 
         try:
-            logger.info("gemini.analyze", model=self._model, doc_type=document.type)
-            response = model_obj.generate_content(parts)
-            result_text = response.text
-        except Exception as exc:
-            logger.error("gemini.analyze.error", error=str(exc))
-            raise AIProviderError(f"Gemini API error: {exc}") from exc
-
-        initial_history = [
-            ConversationMessage(role="user", content=f"[Document analysed — {document.type}]"),
-            ConversationMessage(role="assistant", content=result_text),
-        ]
-
-        return AnalysisResult(
-            text=result_text,
-            provider=self.name,
-            model=self._model,
-            initial_history=initial_history,
-        )
-
-    async def chat(
-        self,
-        message: str,
-        document_summary: str,
-        history: list[ConversationMessage],
-        language_name: str,
-    ) -> str:
-        if not self.is_configured:
-            raise AIProviderNotConfiguredError(self.name)
-
-        model_obj = self._get_model()
-
-        conversation_text = "\n".join(
-            f"{msg.role.capitalize()}: {msg.content}" for msg in history
-        )
-
-        prompt = CHAT_SYSTEM_PROMPT.format(
-            document_summary=document_summary,
-            conversation_history=conversation_text or "(no previous messages)",
-            language_name=language_name,
-        )
-        full_prompt = f"{prompt}\n\nPatient question: {message}"
-
-        try:
-            logger.info("gemini.chat", model=self._model)
-            response = model_obj.generate_content(full_prompt)
-            return response.text
-        except Exception as exc:
-            logger.error("gemini.chat.error", error=str(exc))
+            return await asyncio.to_thread(_run)
+        except (AIProviderError, AIProviderNotConfiguredError):
+            raise
+        except Exception as exc:  # noqa: BLE001
+            logger.error("gemini.error", error=str(exc))
             raise AIProviderError(f"Gemini API error: {exc}") from exc

@@ -86,3 +86,39 @@ class TTSError(MediClearException):
 
     def __init__(self, message: str) -> None:
         super().__init__(f"Text-to-speech failed: {message}", status_code=502)
+
+
+class AuthenticationError(MediClearException):
+    """Missing or invalid API key."""
+
+    def __init__(self, message: str = "Missing or invalid API key.") -> None:
+        super().__init__(message, status_code=401)
+
+
+class RateLimitError(MediClearException):
+    """The client exceeded its rate limit."""
+
+    def __init__(self, retry_after: int) -> None:
+        self.retry_after = retry_after
+        super().__init__(
+            f"Rate limit exceeded. Retry after {retry_after} seconds.",
+            status_code=429,
+        )
+
+
+class ChatDisabledError(MediClearException):
+    """Follow-up chat is unavailable (e.g. zero-retention mode)."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            "Follow-up chat is disabled because the server runs in zero-retention "
+            "mode. Re-submit the document to ask questions.",
+            status_code=409,
+        )
+
+
+class FeatureDisabledError(MediClearException):
+    """A requested feature is turned off by configuration."""
+
+    def __init__(self, feature: str) -> None:
+        super().__init__(f"The '{feature}' feature is disabled on this server.", status_code=404)

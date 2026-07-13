@@ -1,52 +1,30 @@
 """
 OpenAI provider — also covers every OpenAI-compatible API.
 
-Set OPENAI_BASE_URL to redirect requests to any compatible server:
-
-  | Service            | OPENAI_BASE_URL                           | Example model        |
-  |--------------------|-------------------------------------------|----------------------|
-  | OpenAI (default)   | (leave empty)                             | gpt-4o               |
-  | Azure OpenAI       | https://<resource>.openai.azure.com/…     | gpt-4o               |
-  | Ollama             | http://localhost:11434/v1                 | llama3.2             |
-  | Groq               | https://api.groq.com/openai/v1            | llama-3.3-70b-versatile |
-  | LM Studio          | http://localhost:1234/v1                  | <local model name>   |
-  | Together AI        | https://api.together.xyz/v1               | meta-llama/…         |
-  | vLLM               | http://localhost:8000/v1                  | <model path>         |
-  | Mistral AI         | https://api.mistral.ai/v1                 | mistral-large-latest |
-
-The model name is set freely via OPENAI_MODEL — whatever the target server
-accepts.  No model names are hardcoded here.
+Set OPENAI_BASE_URL to redirect requests to any compatible server (Azure
+OpenAI, Ollama, Groq, LM Studio, vLLM, Together, Mistral). The model name is
+set freely via OPENAI_MODEL — nothing is hardcoded.
 """
 
 from __future__ import annotations
 
-import base64
+from collections.abc import AsyncIterator
 
-from app.core.exceptions import AIProviderError, AIProviderNotConfiguredError, UnsupportedModalityError
+from app.core.exceptions import AIProviderError, AIProviderNotConfiguredError
 from app.core.logging import get_logger
-from app.providers.base import AnalysisResult, BaseAIProvider, ConversationMessage, ProcessedDocument
-from app.providers.prompts import ANALYSIS_SYSTEM_PROMPT, CHAT_SYSTEM_PROMPT
+from app.providers.base import BaseAIProvider, Completion, Message
 
 logger = get_logger(__name__)
 
 
 class OpenAIProvider(BaseAIProvider):
-    """
-    OpenAI-compatible provider.
-
-    Works with OpenAI, Azure OpenAI, Ollama, Groq, LM Studio, vLLM,
-    Mistral, Together AI, and any other server that speaks the OpenAI
-    Chat Completions API.
-    """
+    """OpenAI-compatible chat provider (native async client)."""
 
     def __init__(self, api_key: str, model: str, base_url: str = "") -> None:
         self._api_key = api_key
         self._model = model
         self._base_url = base_url or None
-
-    # ------------------------------------------------------------------
-    # Identity
-    # ------------------------------------------------------------------
+        self._client = None
 
     @property
     def name(self) -> str:
@@ -62,128 +40,110 @@ class OpenAIProvider(BaseAIProvider):
 
     @property
     def supports_images(self) -> bool:
-        # Vision support depends on the chosen model, not the provider.
-        # We optimistically return True; the API will reject unsupported models.
+        return True
+
+    @property
+    def supports_streaming(self) -> bool:
         return True
 
     # ------------------------------------------------------------------
-    # Helpers
-    # ------------------------------------------------------------------
 
-    def _get_client(self):  # type: ignore[return]
+    def _get_client(self):
+        if self._client is not None:
+            return self._client
         try:
-            from openai import AsyncOpenAI  # type: ignore[import-untyped]
+            from openai import AsyncOpenAI
         except ImportError as exc:
             raise AIProviderError(
-                "openai package is not installed. Run: pip install openai"
+                "openai package is not installed. Run: pip install 'mediclear-ai[openai]'"
             ) from exc
-
         if not self.is_configured:
             raise AIProviderNotConfiguredError(self.name)
-
         kwargs: dict = {"api_key": self._api_key}
         if self._base_url:
             kwargs["base_url"] = self._base_url
+        self._client = AsyncOpenAI(**kwargs)
+        return self._client
 
-        return AsyncOpenAI(**kwargs)
+    @staticmethod
+    def _to_openai_messages(system: str, messages: list[Message]) -> list[dict]:
+        out: list[dict] = [{"role": "system", "content": system}]
+        for m in messages:
+            if m.image is not None:
+                content: list[dict] = []
+                if m.text:
+                    content.append({"type": "text", "text": m.text})
+                content.append(
+                    {
+                        "type": "image_url",
+                        "image_url": {
+                            "url": f"data:{m.image.media_type};base64,{m.image.b64_data}"
+                        },
+                    }
+                )
+                out.append({"role": m.role, "content": content})
+            else:
+                out.append({"role": m.role, "content": m.text})
+        return out
 
-    def _build_image_content(self, document: ProcessedDocument) -> list[dict]:
-        """Build the content list for a vision request."""
-        b64 = base64.b64encode(document.image_bytes).decode()  # type: ignore[arg-type]
-        media_type = document.image_media_type or "image/jpeg"
-        return [
-            {"type": "text", "text": "ANALYSE THIS MEDICAL IMAGE:"},
-            {
-                "type": "image_url",
-                "image_url": {"url": f"data:{media_type};base64,{b64}"},
-            },
-        ]
-
-    # ------------------------------------------------------------------
-    # Core operations
-    # ------------------------------------------------------------------
-
-    async def analyze_document(
+    async def _complete(
         self,
-        document: ProcessedDocument,
-        language_name: str,
-    ) -> AnalysisResult:
-        if not self.is_configured:
-            raise AIProviderNotConfiguredError(self.name)
-
+        *,
+        system: str,
+        messages: list[Message],
+        max_tokens: int,
+        temperature: float,
+        json_mode: bool,
+    ) -> Completion:
         client = self._get_client()
-        system_prompt = ANALYSIS_SYSTEM_PROMPT.format(language_name=language_name)
-
-        if document.type == "text":
-            user_content: list[dict] | str = (
-                f"MEDICAL DOCUMENT:\n{document.text}"
-            )
-        elif document.type == "image":
-            user_content = self._build_image_content(document)
-        else:
-            raise AIProviderError(f"Unknown document type: {document.type}")
-
-        messages = [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_content},
-        ]
-
+        kwargs: dict = {
+            "model": self._model,
+            "messages": self._to_openai_messages(system, messages),
+            "max_tokens": max_tokens,
+            "temperature": temperature,
+        }
+        if json_mode:
+            kwargs["response_format"] = {"type": "json_object"}
         try:
-            logger.info("openai.analyze", model=self._model, doc_type=document.type)
-            response = await client.chat.completions.create(
-                model=self._model,
-                messages=messages,  # type: ignore[arg-type]
-            )
-            result_text = response.choices[0].message.content or ""
-        except Exception as exc:
-            logger.error("openai.analyze.error", error=str(exc))
-            raise AIProviderError(f"OpenAI-compatible API error: {exc}") from exc
+            resp = await client.chat.completions.create(**kwargs)
+        except Exception as exc:  # noqa: BLE001
+            # Some compatible servers reject response_format — retry without it.
+            if json_mode:
+                kwargs.pop("response_format", None)
+                try:
+                    resp = await client.chat.completions.create(**kwargs)
+                except Exception as exc2:  # noqa: BLE001
+                    raise AIProviderError(f"OpenAI-compatible API error: {exc2}") from exc2
+            else:
+                raise AIProviderError(f"OpenAI-compatible API error: {exc}") from exc
 
-        initial_history = [
-            ConversationMessage(role="user", content=f"[Document analysed — {document.type}]"),
-            ConversationMessage(role="assistant", content=result_text),
-        ]
-
-        return AnalysisResult(
-            text=result_text,
-            provider=self.name,
-            model=self._model,
-            initial_history=initial_history,
+        usage = getattr(resp, "usage", None)
+        return Completion(
+            text=resp.choices[0].message.content or "",
+            input_tokens=getattr(usage, "prompt_tokens", 0) or 0,
+            output_tokens=getattr(usage, "completion_tokens", 0) or 0,
         )
 
-    async def chat(
+    async def _stream(
         self,
-        message: str,
-        document_summary: str,
-        history: list[ConversationMessage],
-        language_name: str,
-    ) -> str:
-        if not self.is_configured:
-            raise AIProviderNotConfiguredError(self.name)
-
+        *,
+        system: str,
+        messages: list[Message],
+        max_tokens: int,
+        temperature: float,
+    ) -> AsyncIterator[str]:
         client = self._get_client()
-        conversation_text = "\n".join(
-            f"{msg.role.capitalize()}: {msg.content}" for msg in history
-        )
-
-        system_prompt = CHAT_SYSTEM_PROMPT.format(
-            document_summary=document_summary,
-            conversation_history=conversation_text or "(no previous messages)",
-            language_name=language_name,
-        )
-
-        messages = [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": message},
-        ]
-
         try:
-            logger.info("openai.chat", model=self._model)
-            response = await client.chat.completions.create(
+            stream = await client.chat.completions.create(
                 model=self._model,
-                messages=messages,  # type: ignore[arg-type]
+                messages=self._to_openai_messages(system, messages),
+                max_tokens=max_tokens,
+                temperature=temperature,
+                stream=True,
             )
-            return response.choices[0].message.content or ""
-        except Exception as exc:
-            logger.error("openai.chat.error", error=str(exc))
+            async for chunk in stream:
+                delta = chunk.choices[0].delta.content if chunk.choices else None
+                if delta:
+                    yield delta
+        except Exception as exc:  # noqa: BLE001
             raise AIProviderError(f"OpenAI-compatible API error: {exc}") from exc

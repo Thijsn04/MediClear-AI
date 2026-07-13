@@ -1,28 +1,33 @@
-"""Document analysis endpoint — supports plain text and file uploads."""
+"""Document analysis endpoint — plain text or file upload → structured result."""
 
 from __future__ import annotations
 
 from typing import Annotated, Optional
 
-from fastapi import APIRouter, Depends, File, Form, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 
+from app.api.v1.deps import rate_limited_identity
+from app.core import metrics
 from app.core.exceptions import DocumentProcessingError
+from app.core.logging import get_logger
 from app.dependencies import get_ai_service, get_document_service
+from app.models.languages import is_supported
 from app.models.schemas import AnalyzeResponse, SUPPORTED_LANGUAGES
 from app.services.ai_service import AIService
 from app.services.document_service import DocumentService
 
 router = APIRouter()
+logger = get_logger(__name__)
+
+_LEVELS = {"A2", "B1", "B2"}
 
 
 def _validate_language(language: str) -> str:
-    """Validate language code from Form data (Pydantic validators don't run on Form fields)."""
-    if language not in SUPPORTED_LANGUAGES:
-        from fastapi import HTTPException
+    if not is_supported(language):
         raise HTTPException(
             status_code=422,
             detail=f"Unsupported language code '{language}'. "
-                   f"Supported codes: {', '.join(SUPPORTED_LANGUAGES)}.",
+            f"Supported codes: {', '.join(SUPPORTED_LANGUAGES)}.",
         )
     return language
 
@@ -32,34 +37,28 @@ def _validate_language(language: str) -> str:
     response_model=AnalyzeResponse,
     summary="Analyse a medical document",
     description=(
-        "Submit a medical document as plain text **or** as an uploaded file "
-        "(PDF, JPEG, PNG). The AI provider configured by the operator will "
-        "return a patient-friendly explanation structured with a Summary, "
-        "Explanation, Key Medical Terms, and What This Means for You sections.\n\n"
-        "The response includes a `session_id` that you must pass to the "
-        "`/chat/{session_id}` endpoint for follow-up questions."
+        "Submit a medical document as plain text **or** an uploaded file (PDF, "
+        "JPEG, PNG, WEBP). Returns a **structured** analysis (summary, "
+        "explanation, key terms, action items, and — when present — lab values "
+        "and medications) plus a rendered markdown view and a readability "
+        "assessment. The `session_id` powers `/chat/{session_id}` follow-ups."
     ),
     tags=["Analysis"],
 )
 async def analyze(
-    language: Annotated[
-        str,
-        Form(description="BCP 47 language code for the response, e.g. 'en', 'nl'."),
-    ] = "en",
-    text: Annotated[
-        Optional[str],
-        Form(description="Plain text to analyse. Provide either this or a file."),
-    ] = None,
-    file: Annotated[
-        Optional[UploadFile],
-        File(description="PDF, JPEG, or PNG file to analyse."),
-    ] = None,
+    language: Annotated[str, Form()] = "en",
+    text: Annotated[Optional[str], Form()] = None,
+    file: Annotated[Optional[UploadFile], File()] = None,
+    reading_level: Annotated[Optional[str], Form()] = None,
     ai_service: AIService = Depends(get_ai_service),
     document_service: DocumentService = Depends(get_document_service),
+    identity: str = Depends(rate_limited_identity),
 ) -> AnalyzeResponse:
     language = _validate_language(language)
+    if reading_level is not None and reading_level not in _LEVELS:
+        raise HTTPException(status_code=422, detail="reading_level must be A2, B1, or B2.")
 
-    if file is not None:
+    if file is not None and (file.filename or file.size):
         content = await file.read()
         document = document_service.process_upload(
             content=content,
@@ -73,12 +72,29 @@ async def analyze(
             "No input provided. Submit either a 'text' field or a 'file' upload."
         )
 
-    session = await ai_service.analyze(document=document, language=language)
+    outcome = await ai_service.analyze(
+        document=document, language=language, target_level=reading_level
+    )
+
+    metrics.record_analysis(
+        outcome.provider, outcome.cached, outcome.input_tokens, outcome.output_tokens
+    )
+    logger.info(
+        "audit.analyze",
+        identity=identity,
+        provider=outcome.provider,
+        model=outcome.model,
+        language=language,
+        cached=outcome.cached,
+        doc_type=outcome.analysis.document_type.value,
+    )
 
     return AnalyzeResponse(
-        session_id=session.id,
-        analysis=session.document_summary,
-        language=session.language,
-        provider=session.provider,
-        model=session.model,
+        session_id=outcome.session_id,
+        analysis=outcome.analysis,
+        markdown=outcome.analysis.render_markdown(),
+        language=language,
+        provider=outcome.provider,
+        model=outcome.model,
+        cached=outcome.cached,
     )

@@ -33,7 +33,9 @@
   --color-info-bg:    #EBF4FF;
 
   /* Typography */
-  --font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  /* System font stack — no external font download, works offline / air-gapped. */
+  --font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+    Helvetica, Arial, 'Noto Sans', sans-serif;
   --font-size-base: 1rem;
   --line-height: 1.6;
 
@@ -667,4 +669,39 @@ a:hover { text-decoration: underline; }
   .action-buttons { flex-direction: column; }
   .btn { justify-content: center; }
   .chat-message { max-width: 95%; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Structured analysis rendering (v3 — replaces markdown/CDN rendering)
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.readability-badge {
+  display: inline-block;
+  margin-bottom: var(--space-4, 1rem);
+  padding: 0.25rem 0.7rem;
+  border-radius: 999px;
+  background: var(--color-surface-alt, #eef2f7);
+  color: var(--color-text-muted, #555);
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.analysis-content [dir="rtl"],
+.analysis-content[dir="rtl"] { text-align: right; }
+
+.table-wrap { overflow-x: auto; margin: var(--space-3, 0.75rem) 0; }
+.table-wrap table { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
+.table-wrap th, .table-wrap td {
+  border: 1px solid var(--color-border, #e2e8f0);
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+}
+.table-wrap thead th { background: var(--color-surface-alt, #eef2f7); font-weight: 600; }
+
+.term-note { color: var(--color-warning, #b45309); font-style: italic; font-size: 0.85em; }
+
+.analysis-disclaimer {
+  color: var(--color-text-muted, #666);
+  font-size: 0.85rem;
+  font-style: italic;
 }

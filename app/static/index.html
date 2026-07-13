@@ -6,14 +6,9 @@
   <meta name="description" content="MediClear AI — Medical documents explained in plain language for patients." />
   <title>MediClear AI</title>
 
-  <!-- Preconnect for performance -->
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-
-  <!-- marked.js for Markdown rendering (CDN) -->
-  <script src="https://cdn.jsdelivr.net/npm/marked@9/marked.min.js"></script>
-
+  <!-- No external CDNs: the UI renders the API's *structured* response directly
+       into the DOM (XSS-safe, no markdown parser), and uses a system font
+       stack — so the frontend works fully offline / air-gapped. -->
   <link rel="stylesheet" href="/css/main.css" />
 </head>
 <body>

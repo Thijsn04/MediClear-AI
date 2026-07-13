@@ -24,10 +24,16 @@ def test_analyze_text_response_schema(client: TestClient) -> None:
     data = resp.json()
     assert "session_id" in data
     assert "analysis" in data
+    assert "markdown" in data
     assert "language" in data
     assert "provider" in data
     assert "model" in data
     assert data["language"] == "en"
+    # analysis is now a structured object, not a string
+    assert isinstance(data["analysis"], dict)
+    assert "summary" in data["analysis"]
+    assert "key_terms" in data["analysis"]
+    assert data["markdown"].startswith("#")
 
 
 def test_analyze_text_creates_session(client: TestClient) -> None:

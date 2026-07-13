@@ -1,65 +1,57 @@
 /**
  * MediClear AI — Frontend Application
  *
- * Pure vanilla JS, no build step required.
- * Communicates with the FastAPI backend via fetch().
+ * Vanilla JS, no build step, no external CDNs. The API returns a *structured*
+ * analysis object, which we render directly into the DOM with textContent —
+ * so there is no markdown parser and no innerHTML of model output, closing the
+ * XSS vector entirely. Chat answers stream over Server-Sent Events.
  */
 
-/* ═══════════════════════════════════════════════════════════════════════════
-   State
-   ═══════════════════════════════════════════════════════════════════════════ */
-
+/* ── State ────────────────────────────────────────────────────────────────── */
 const state = {
   sessionId: null,
-  currentLanguage: 'en',      // Response/AI language
-  uiLanguage: 'en',           // Interface display language
-  translations: {},           // { langCode: { key: value } }
-  languages: [],              // [{ code, name }]
-  analysisText: '',           // Last analysis result text
-  selectedFile: null,         // { file: File, type: 'pdf'|'image', previewUrl? }
+  currentLanguage: 'en',
+  uiLanguage: 'en',
+  translations: {},
+  languages: [],
+  languagesByCode: {},
+  analysisText: '',   // markdown convenience string, used for TTS
+  selectedFile: null,
   audioBlob: null,
-  isLoading: false,
 };
 
-/* ═══════════════════════════════════════════════════════════════════════════
-   DOM references
-   ═══════════════════════════════════════════════════════════════════════════ */
-
+/* ── DOM refs ─────────────────────────────────────────────────────────────── */
 const $ = id => document.getElementById(id);
-
 const el = {
-  uiLangSelect:      $('ui-language-select'),
-  tabText:           $('tab-text'),
-  tabFile:           $('tab-file'),
-  panelText:         $('panel-text'),
-  panelFile:         $('panel-file'),
-  textInput:         $('text-input'),
-  dropZone:          $('drop-zone'),
-  fileInput:         $('file-input'),
-  filePreview:       $('file-preview'),
-  responseLang:      $('response-language'),
-  btnAnalyze:        $('btn-analyze'),
-  btnClear:          $('btn-clear'),
-  loadingIndicator:  $('loading-indicator'),
-  loadingText:       $('loading-text'),
-  resultsSection:    $('results-section'),
-  providerBadge:     $('provider-badge'),
-  audioContainer:    $('audio-container'),
-  audioPlayer:       $('audio-player'),
-  analysisContent:   $('analysis-content'),
-  btnListen:         $('btn-listen'),
-  chatSection:       $('chat-section'),
-  chatMessages:      $('chat-messages'),
-  chatForm:          $('chat-form'),
-  chatInput:         $('chat-input'),
-  errorBanner:       $('error-banner'),
-  errorMessage:      $('error-message'),
+  uiLangSelect: $('ui-language-select'),
+  tabText: $('tab-text'),
+  tabFile: $('tab-file'),
+  panelText: $('panel-text'),
+  panelFile: $('panel-file'),
+  textInput: $('text-input'),
+  dropZone: $('drop-zone'),
+  fileInput: $('file-input'),
+  filePreview: $('file-preview'),
+  responseLang: $('response-language'),
+  btnAnalyze: $('btn-analyze'),
+  btnClear: $('btn-clear'),
+  loadingIndicator: $('loading-indicator'),
+  loadingText: $('loading-text'),
+  resultsSection: $('results-section'),
+  providerBadge: $('provider-badge'),
+  audioContainer: $('audio-container'),
+  audioPlayer: $('audio-player'),
+  analysisContent: $('analysis-content'),
+  btnListen: $('btn-listen'),
+  chatSection: $('chat-section'),
+  chatMessages: $('chat-messages'),
+  chatForm: $('chat-form'),
+  chatInput: $('chat-input'),
+  errorBanner: $('error-banner'),
+  errorMessage: $('error-message'),
 };
 
-/* ═══════════════════════════════════════════════════════════════════════════
-   i18n helpers
-   ═══════════════════════════════════════════════════════════════════════════ */
-
+/* ── i18n ─────────────────────────────────────────────────────────────────── */
 function t(key) {
   const lang = state.translations[state.uiLanguage];
   if (lang && lang[key]) return lang[key];
@@ -68,29 +60,25 @@ function t(key) {
 }
 
 function applyTranslations() {
-  // data-i18n elements
   document.querySelectorAll('[data-i18n]').forEach(node => {
-    const key = node.getAttribute('data-i18n');
-    const value = t(key);
+    const value = t(node.getAttribute('data-i18n'));
     if (value) node.textContent = value;
   });
-
-  // data-i18n-placeholder elements
   document.querySelectorAll('[data-i18n-placeholder]').forEach(node => {
-    const key = node.getAttribute('data-i18n-placeholder');
-    const value = t(key);
+    const value = t(node.getAttribute('data-i18n-placeholder'));
     if (value) node.placeholder = value;
   });
-
-  // RTL support for Arabic
-  document.documentElement.setAttribute('dir', state.uiLanguage === 'ar' ? 'rtl' : 'ltr');
+  const rtl = isRtl(state.uiLanguage);
+  document.documentElement.setAttribute('dir', rtl ? 'rtl' : 'ltr');
   document.documentElement.setAttribute('lang', state.uiLanguage);
 }
 
-/* ═══════════════════════════════════════════════════════════════════════════
-   API helpers
-   ═══════════════════════════════════════════════════════════════════════════ */
+function isRtl(code) {
+  const lang = state.languagesByCode[code];
+  return !!(lang && lang.rtl);
+}
 
+/* ── API helper ───────────────────────────────────────────────────────────── */
 async function apiFetch(path, options = {}) {
   const resp = await fetch(path, options);
   if (!resp.ok) {
@@ -98,44 +86,32 @@ async function apiFetch(path, options = {}) {
     try {
       const body = await resp.json();
       detail = body.error || body.detail || detail;
-    } catch (_) { /* ignore parse errors */ }
+    } catch (_) { /* ignore */ }
     throw new Error(detail);
   }
   return resp;
 }
 
-/* ═══════════════════════════════════════════════════════════════════════════
-   Initialisation
-   ═══════════════════════════════════════════════════════════════════════════ */
-
+/* ── Init ─────────────────────────────────────────────────────────────────── */
 async function init() {
   try {
-    // Load translations and language list in parallel
     const [transResp, langResp] = await Promise.all([
       apiFetch('/api/v1/translations'),
       apiFetch('/api/v1/languages'),
     ]);
-
     state.translations = await transResp.json();
-    const langData = await langResp.json();
-    state.languages = langData.languages;
+    state.languages = (await langResp.json()).languages;
+    state.languages.forEach(l => { state.languagesByCode[l.code] = l; });
 
-    // Populate UI language selector (header)
-    state.languages.forEach(lang => {
-      const opt = document.createElement('option');
-      opt.value = lang.code;
-      opt.textContent = lang.name;
-      el.uiLangSelect.appendChild(opt);
-    });
+    for (const sel of [el.uiLangSelect, el.responseLang]) {
+      state.languages.forEach(lang => {
+        const opt = document.createElement('option');
+        opt.value = lang.code;
+        opt.textContent = lang.name;
+        sel.appendChild(opt);
+      });
+    }
     el.uiLangSelect.value = state.uiLanguage;
-
-    // Populate response language selector (input card)
-    state.languages.forEach(lang => {
-      const opt = document.createElement('option');
-      opt.value = lang.code;
-      opt.textContent = lang.name;
-      el.responseLang.appendChild(opt);
-    });
     el.responseLang.value = state.currentLanguage;
 
     applyTranslations();
@@ -146,38 +122,23 @@ async function init() {
   }
 }
 
-/* ═══════════════════════════════════════════════════════════════════════════
-   Event binding
-   ═══════════════════════════════════════════════════════════════════════════ */
-
+/* ── Events ───────────────────────────────────────────────────────────────── */
 function bindEvents() {
-  // UI language change (header)
   el.uiLangSelect.addEventListener('change', () => {
     state.uiLanguage = el.uiLangSelect.value;
     applyTranslations();
   });
-
-  // Response language change
   el.responseLang.addEventListener('change', () => {
     state.currentLanguage = el.responseLang.value;
   });
-
-  // Tab switching
   el.tabText.addEventListener('click', () => switchTab('text'));
   el.tabFile.addEventListener('click', () => switchTab('file'));
 
-  // File drop zone
   el.dropZone.addEventListener('click', () => el.fileInput.click());
   el.dropZone.addEventListener('keydown', e => {
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault();
-      el.fileInput.click();
-    }
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); el.fileInput.click(); }
   });
-  el.dropZone.addEventListener('dragover', e => {
-    e.preventDefault();
-    el.dropZone.classList.add('drag-over');
-  });
+  el.dropZone.addEventListener('dragover', e => { e.preventDefault(); el.dropZone.classList.add('drag-over'); });
   el.dropZone.addEventListener('dragleave', () => el.dropZone.classList.remove('drag-over'));
   el.dropZone.addEventListener('drop', e => {
     e.preventDefault();
@@ -189,34 +150,16 @@ function bindEvents() {
     if (el.fileInput.files[0]) handleFileSelected(el.fileInput.files[0]);
   });
 
-  // Analyze
   el.btnAnalyze.addEventListener('click', handleAnalyze);
-
-  // Clear
   el.btnClear.addEventListener('click', resetAll);
-
-  // Listen (TTS)
   el.btnListen.addEventListener('click', handleListen);
-
-  // Chat form
-  el.chatForm.addEventListener('submit', e => {
-    e.preventDefault();
-    handleChat();
-  });
-
-  // Allow Ctrl+Enter to submit chat
+  el.chatForm.addEventListener('submit', e => { e.preventDefault(); handleChat(); });
   el.chatInput.addEventListener('keydown', e => {
-    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
-      e.preventDefault();
-      handleChat();
-    }
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); handleChat(); }
   });
 }
 
-/* ═══════════════════════════════════════════════════════════════════════════
-   Tab switching
-   ═══════════════════════════════════════════════════════════════════════════ */
-
+/* ── Tabs & files ─────────────────────────────────────────────────────────── */
 function switchTab(tab) {
   const isText = tab === 'text';
   el.tabText.classList.toggle('active', isText);
@@ -227,74 +170,48 @@ function switchTab(tab) {
   el.panelFile.classList.toggle('hidden', isText);
 }
 
-/* ═══════════════════════════════════════════════════════════════════════════
-   File handling
-   ═══════════════════════════════════════════════════════════════════════════ */
-
 function handleFileSelected(file) {
   const isImage = file.type.startsWith('image/');
   const isPdf = file.type === 'application/pdf';
-
-  if (!isImage && !isPdf) {
-    showError(t('err_file_type'));
-    return;
-  }
+  if (!isImage && !isPdf) { showError(t('err_file_type')); return; }
 
   state.selectedFile = { file, type: isImage ? 'image' : 'pdf' };
   el.filePreview.classList.remove('hidden');
+  el.filePreview.textContent = '';
 
+  const label = document.createElement('span');
+  label.textContent = `${isImage ? '📷' : '📄'} ${file.name} (${formatBytes(file.size)})`;
   if (isImage) {
-    const url = URL.createObjectURL(file);
-    el.filePreview.innerHTML = `
-      <img src="${url}" alt="Preview of ${escHtml(file.name)}" />
-      <span>📷 ${escHtml(file.name)} (${formatBytes(file.size)})</span>
-    `;
-  } else {
-    el.filePreview.innerHTML = `
-      <span style="font-size:1.5rem">📄</span>
-      <span>${escHtml(file.name)} (${formatBytes(file.size)})</span>
-    `;
+    const img = document.createElement('img');
+    img.src = URL.createObjectURL(file);
+    img.alt = `Preview of ${file.name}`;
+    el.filePreview.appendChild(img);
   }
+  el.filePreview.appendChild(label);
 }
 
-/* ═══════════════════════════════════════════════════════════════════════════
-   Analysis
-   ═══════════════════════════════════════════════════════════════════════════ */
-
+/* ── Analysis ─────────────────────────────────────────────────────────────── */
 async function handleAnalyze() {
   const activeTab = el.tabText.classList.contains('active') ? 'text' : 'file';
   const textValue = el.textInput.value.trim();
-
-  if (activeTab === 'text' && !textValue) {
-    showError(t('err_no_input'));
-    return;
-  }
-  if (activeTab === 'file' && !state.selectedFile) {
-    showError(t('err_no_input'));
-    return;
-  }
+  if (activeTab === 'text' && !textValue) { showError(t('err_no_input')); return; }
+  if (activeTab === 'file' && !state.selectedFile) { showError(t('err_no_input')); return; }
 
   setLoading(true, t('loading_analyze'));
   hideError();
   hideResults();
-
   try {
     const formData = new FormData();
     formData.append('language', state.currentLanguage);
-
-    if (activeTab === 'text') {
-      formData.append('text', textValue);
-    } else {
-      formData.append('file', state.selectedFile.file);
-    }
+    if (activeTab === 'text') formData.append('text', textValue);
+    else formData.append('file', state.selectedFile.file);
 
     const resp = await apiFetch('/api/v1/analyze', { method: 'POST', body: formData });
     const data = await resp.json();
 
     state.sessionId = data.session_id;
-    state.analysisText = data.analysis;
+    state.analysisText = data.markdown;
     state.audioBlob = null;
-
     showResults(data);
   } catch (err) {
     showError(err.message || t('err_generic'));
@@ -303,27 +220,122 @@ async function handleAnalyze() {
   }
 }
 
-/* ═══════════════════════════════════════════════════════════════════════════
-   Results display
-   ═══════════════════════════════════════════════════════════════════════════ */
-
+/* ── Structured, XSS-safe rendering ───────────────────────────────────────── */
 function showResults(data) {
-  // Provider badge
-  el.providerBadge.textContent = `🤖 ${data.provider} · ${data.model} · ${data.language.toUpperCase()}`;
+  el.providerBadge.textContent =
+    `🤖 ${data.provider} · ${data.model} · ${data.language.toUpperCase()}${data.cached ? ' · cached' : ''}`;
   el.providerBadge.classList.remove('hidden');
 
-  // Render markdown
-  el.analysisContent.innerHTML = marked.parse(data.analysis);
+  renderAnalysis(el.analysisContent, data.analysis, data.language);
 
-  // Reset audio
   el.audioContainer.classList.add('hidden');
-
-  // Reset chat
-  el.chatMessages.innerHTML = '';
-
+  el.chatMessages.textContent = '';
   el.resultsSection.classList.remove('hidden');
-  el.chatSection.classList.remove('hidden');
+  el.chatSection.classList.toggle('hidden', !data.session_id);
   el.resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function renderAnalysis(container, analysis, language) {
+  container.textContent = '';
+  container.setAttribute('dir', isRtl(language) ? 'rtl' : 'ltr');
+
+  const h = (level, text) => { const n = document.createElement('h' + level); n.textContent = text; return n; };
+  const p = text => { const n = document.createElement('p'); n.textContent = text; return n; };
+
+  if (analysis.document_type === 'not_medical') {
+    container.appendChild(h(3, t('not_medical') || 'This does not look like a medical document'));
+    container.appendChild(p(analysis.summary || analysis.explanation || ''));
+    return;
+  }
+
+  if (analysis.readability && analysis.readability.estimated_cefr) {
+    const badge = document.createElement('div');
+    badge.className = 'readability-badge';
+    const meets = analysis.readability.meets_target;
+    badge.textContent = `📖 ${t('reading_level') || 'Reading level'}: ${analysis.readability.estimated_cefr}` +
+      (meets === false ? ' ⚠︎' : ' ✓');
+    container.appendChild(badge);
+  }
+
+  if (analysis.summary) { container.appendChild(h(2, t('sec_summary') || 'Summary')); container.appendChild(p(analysis.summary)); }
+  if (analysis.explanation) {
+    container.appendChild(h(2, t('sec_explanation') || 'Explanation'));
+    analysis.explanation.split(/\n{2,}/).forEach(par => { if (par.trim()) container.appendChild(p(par.trim())); });
+  }
+
+  if (analysis.lab_values && analysis.lab_values.length) {
+    container.appendChild(h(2, t('sec_labs') || 'Lab Values'));
+    container.appendChild(buildTable(
+      ['Test', 'Result', 'Reference', 'Flag'],
+      analysis.lab_values.map(lv => [lv.name, `${lv.value}${lv.unit ? ' ' + lv.unit : ''}`, lv.reference_range || '—', lv.flag || '—'])
+    ));
+  }
+
+  if (analysis.medications && analysis.medications.length) {
+    container.appendChild(h(2, t('sec_meds') || 'Medications'));
+    container.appendChild(buildList(analysis.medications.map(m =>
+      `${m.name}${m.dose ? ' — ' + m.dose : ''}${m.frequency ? ', ' + m.frequency : ''}${m.purpose ? ' (' + m.purpose + ')' : ''}`)));
+  }
+
+  if (analysis.key_terms && analysis.key_terms.length) {
+    container.appendChild(h(2, t('sec_terms') || 'Key Medical Terms'));
+    const ul = document.createElement('ul');
+    analysis.key_terms.forEach(kt => {
+      const li = document.createElement('li');
+      const strong = document.createElement('strong');
+      strong.textContent = kt.term + ' ';
+      li.appendChild(strong);
+      li.appendChild(document.createTextNode('— ' + kt.definition));
+      if (kt.found_in_source === false) {
+        const note = document.createElement('em');
+        note.className = 'term-note';
+        note.textContent = ' (not found verbatim in your document)';
+        li.appendChild(note);
+      }
+      ul.appendChild(li);
+    });
+    container.appendChild(ul);
+  }
+
+  if (analysis.action_items && analysis.action_items.length) {
+    container.appendChild(h(2, t('sec_actions') || 'What This Means for You'));
+    container.appendChild(buildList(analysis.action_items));
+  }
+
+  if (analysis.disclaimer) {
+    const hr = document.createElement('hr');
+    const disc = document.createElement('p');
+    disc.className = 'analysis-disclaimer';
+    disc.textContent = analysis.disclaimer;
+    container.appendChild(hr);
+    container.appendChild(disc);
+  }
+}
+
+function buildList(items) {
+  const ul = document.createElement('ul');
+  items.forEach(text => { const li = document.createElement('li'); li.textContent = text; ul.appendChild(li); });
+  return ul;
+}
+
+function buildTable(headers, rows) {
+  const wrap = document.createElement('div');
+  wrap.className = 'table-wrap';
+  const table = document.createElement('table');
+  const thead = document.createElement('thead');
+  const htr = document.createElement('tr');
+  headers.forEach(hdr => { const th = document.createElement('th'); th.textContent = hdr; htr.appendChild(th); });
+  thead.appendChild(htr);
+  const tbody = document.createElement('tbody');
+  rows.forEach(row => {
+    const tr = document.createElement('tr');
+    row.forEach(cell => { const td = document.createElement('td'); td.textContent = cell; tr.appendChild(td); });
+    tbody.appendChild(tr);
+  });
+  table.appendChild(thead);
+  table.appendChild(tbody);
+  wrap.appendChild(table);
+  return wrap;
 }
 
 function hideResults() {
@@ -331,31 +343,20 @@ function hideResults() {
   el.chatSection.classList.add('hidden');
 }
 
-/* ═══════════════════════════════════════════════════════════════════════════
-   Text-to-speech
-   ═══════════════════════════════════════════════════════════════════════════ */
-
+/* ── Text-to-speech ───────────────────────────────────────────────────────── */
 async function handleListen() {
   if (!state.analysisText) return;
-
   setLoading(true, t('loading_audio'));
   el.btnListen.disabled = true;
-
   try {
-    if (state.audioBlob) {
-      playAudio(state.audioBlob);
-      return;
-    }
-
+    if (state.audioBlob) { playAudio(state.audioBlob); return; }
     const resp = await apiFetch('/api/v1/audio', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ text: state.analysisText, language: state.currentLanguage }),
     });
-
-    const blob = await resp.blob();
-    state.audioBlob = blob;
-    playAudio(blob);
+    state.audioBlob = await resp.blob();
+    playAudio(state.audioBlob);
   } catch (err) {
     showError(err.message || t('err_generic'));
   } finally {
@@ -365,18 +366,12 @@ async function handleListen() {
 }
 
 function playAudio(blob) {
-  const url = URL.createObjectURL(blob);
-  el.audioPlayer.src = url;
+  el.audioPlayer.src = URL.createObjectURL(blob);
   el.audioContainer.classList.remove('hidden');
-  el.audioPlayer.play().catch(() => {
-    // Autoplay might be blocked — the controls are visible so the user can press play
-  });
+  el.audioPlayer.play().catch(() => {});
 }
 
-/* ═══════════════════════════════════════════════════════════════════════════
-   Chat
-   ═══════════════════════════════════════════════════════════════════════════ */
-
+/* ── Chat (streaming) ─────────────────────────────────────────────────────── */
 async function handleChat() {
   const message = el.chatInput.value.trim();
   if (!message || !state.sessionId) return;
@@ -387,21 +382,22 @@ async function handleChat() {
   const btnSend = $('btn-chat-send');
   btnSend.disabled = true;
 
-  // Show typing indicator
-  const typingId = appendTypingIndicator();
+  const bubble = appendChatMessage('assistant', '', t('chat_assistant') || 'MediClear AI');
+  bubble.setAttribute('dir', isRtl(state.currentLanguage) ? 'rtl' : 'ltr');
 
   try {
-    const resp = await apiFetch(`/api/v1/chat/${state.sessionId}`, {
+    const resp = await fetch(`/api/v1/chat/${state.sessionId}/stream`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ message, language: state.currentLanguage }),
     });
-    const data = await resp.json();
-
-    removeTypingIndicator(typingId);
-    appendChatMessage('assistant', data.response, t('chat_assistant') || 'MediClear AI');
+    if (!resp.ok || !resp.body) throw new Error(`HTTP ${resp.status}`);
+    await consumeSSE(resp.body, evt => {
+      if (evt.delta) { bubble.textContent += evt.delta; el.chatMessages.scrollTop = el.chatMessages.scrollHeight; }
+      if (evt.error) throw new Error(evt.error);
+    });
   } catch (err) {
-    removeTypingIndicator(typingId);
+    bubble.textContent = (err.message || t('err_generic'));
     showError(err.message || t('err_generic'));
   } finally {
     el.chatInput.disabled = false;
@@ -410,115 +406,72 @@ async function handleChat() {
   }
 }
 
+async function consumeSSE(stream, onEvent) {
+  const reader = stream.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+  for (;;) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    const events = buffer.split('\n\n');
+    buffer = events.pop();
+    for (const chunk of events) {
+      const line = chunk.split('\n').find(l => l.startsWith('data:'));
+      if (!line) continue;
+      try { onEvent(JSON.parse(line.slice(5).trim())); } catch (_) { /* ignore */ }
+    }
+  }
+}
+
 function appendChatMessage(role, content, label) {
   const wrapper = document.createElement('div');
   wrapper.className = `chat-message ${role}`;
-
   const labelEl = document.createElement('div');
   labelEl.className = 'chat-message-label';
   labelEl.textContent = label;
-
   const bubble = document.createElement('div');
   bubble.className = 'chat-message-bubble';
-
-  if (role === 'assistant') {
-    const inner = document.createElement('div');
-    inner.className = 'prose';
-    inner.innerHTML = marked.parse(content);
-    bubble.appendChild(inner);
-  } else {
-    bubble.textContent = content;
-  }
-
+  bubble.textContent = content;
   wrapper.appendChild(labelEl);
   wrapper.appendChild(bubble);
   el.chatMessages.appendChild(wrapper);
   el.chatMessages.scrollTop = el.chatMessages.scrollHeight;
-  return wrapper;
+  return bubble;
 }
 
-function appendTypingIndicator() {
-  const id = 'typing-' + Date.now();
-  const wrapper = document.createElement('div');
-  wrapper.id = id;
-  wrapper.className = 'chat-message assistant';
-  wrapper.setAttribute('aria-label', t('loading_chat') || 'Thinking…');
-
-  const bubble = document.createElement('div');
-  bubble.className = 'chat-message-bubble';
-  bubble.innerHTML = `<span style="color:var(--color-text-muted);font-style:italic">${t('loading_chat') || 'Thinking…'}</span>`;
-
-  wrapper.appendChild(bubble);
-  el.chatMessages.appendChild(wrapper);
-  el.chatMessages.scrollTop = el.chatMessages.scrollHeight;
-  return id;
-}
-
-function removeTypingIndicator(id) {
-  const el = document.getElementById(id);
-  if (el) el.remove();
-}
-
-/* ═══════════════════════════════════════════════════════════════════════════
-   Reset
-   ═══════════════════════════════════════════════════════════════════════════ */
-
+/* ── Reset / loading / errors ─────────────────────────────────────────────── */
 function resetAll() {
   state.sessionId = null;
   state.analysisText = '';
   state.selectedFile = null;
   state.audioBlob = null;
-
   el.textInput.value = '';
   el.fileInput.value = '';
   el.filePreview.classList.add('hidden');
-  el.filePreview.innerHTML = '';
+  el.filePreview.textContent = '';
   el.audioContainer.classList.add('hidden');
-  el.chatMessages.innerHTML = '';
+  el.chatMessages.textContent = '';
   el.chatInput.value = '';
-
   hideResults();
   hideError();
   switchTab('text');
-
   el.textInput.focus();
 }
 
-/* ═══════════════════════════════════════════════════════════════════════════
-   Loading state
-   ═══════════════════════════════════════════════════════════════════════════ */
-
 function setLoading(active, message) {
-  state.isLoading = active;
   el.loadingIndicator.classList.toggle('hidden', !active);
   el.btnAnalyze.disabled = active;
   if (message) el.loadingText.textContent = message;
 }
 
-/* ═══════════════════════════════════════════════════════════════════════════
-   Error handling
-   ═══════════════════════════════════════════════════════════════════════════ */
-
 function showError(message) {
   el.errorMessage.textContent = message;
   el.errorBanner.classList.remove('hidden');
 }
-
 function hideError() {
   el.errorBanner.classList.add('hidden');
   el.errorMessage.textContent = '';
-}
-
-/* ═══════════════════════════════════════════════════════════════════════════
-   Utilities
-   ═══════════════════════════════════════════════════════════════════════════ */
-
-function escHtml(str) {
-  return str
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
 }
 
 function formatBytes(bytes) {
@@ -526,9 +479,5 @@ function formatBytes(bytes) {
   if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
   return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
 }
-
-/* ═══════════════════════════════════════════════════════════════════════════
-   Bootstrap
-   ═══════════════════════════════════════════════════════════════════════════ */
 
 document.addEventListener('DOMContentLoaded', init);
