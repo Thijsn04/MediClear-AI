@@ -28,6 +28,7 @@ from app.services.session_store import (
     RedisSessionStore,
     SessionStore,
 )
+from app.services.terminology import TerminologyService
 from app.services.tts_service import TTSService
 
 logger = get_logger(__name__)
@@ -84,11 +85,22 @@ def get_rate_limiter() -> RateLimiter:
 
 
 @lru_cache
+def get_terminology_service() -> TerminologyService:
+    settings = get_settings()
+    return TerminologyService(
+        enabled=settings.terminology_enabled,
+        online=settings.terminology_online,
+        timeout_seconds=settings.terminology_timeout_seconds,
+    )
+
+
+@lru_cache
 def get_ai_service() -> AIService:
     settings = get_settings()
     provider = build_provider(settings)
     return AIService(
         provider=provider,
+        terminology=get_terminology_service(),
         session_store=get_session_store(),
         cache=get_result_cache(),
         settings=settings,

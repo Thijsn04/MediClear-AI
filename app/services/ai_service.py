@@ -25,6 +25,7 @@ from app.providers.base import BaseAIProvider, ProcessedDocument
 from app.services import readability as readability_mod
 from app.services.cache import ResultCache, make_key
 from app.services.session_store import ChatSession, SessionStore
+from app.services.terminology import TerminologyService
 
 logger = get_logger(__name__)
 
@@ -47,11 +48,13 @@ class AIService:
         session_store: SessionStore,
         cache: ResultCache,
         settings: Settings,
+        terminology: TerminologyService | None = None,
     ) -> None:
         self._provider = provider
         self._sessions = session_store
         self._cache = cache
         self._settings = settings
+        self._terminology = terminology
 
     @property
     def provider(self) -> BaseAIProvider:
@@ -97,6 +100,8 @@ class AIService:
             analysis = await self._enforce_readability(
                 analysis, document, language_name, target_level
             )
+            if self._terminology is not None:
+                analysis.key_terms = await self._terminology.enrich(analysis.key_terms, language)
             if cache_key:
                 await self._cache.set(cache_key, analysis)
 

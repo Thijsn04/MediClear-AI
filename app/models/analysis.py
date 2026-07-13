@@ -14,6 +14,7 @@ still yields something sensible from whatever fields were populated.
 from __future__ import annotations
 
 from enum import Enum
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
@@ -42,6 +43,12 @@ class KeyTerm(BaseModel):
     found_in_source: bool = Field(
         default=True,
         description="True if the term appears in the source document (faithfulness check).",
+    )
+    # Provenance of the definition: the model, the bundled glossary, or an
+    # online terminology source (MedlinePlus). Set by the grounding layer.
+    source: Literal["model", "glossary", "online"] = Field(default="model")
+    source_url: str | None = Field(
+        default=None, description="Citation URL when the definition is externally sourced."
     )
 
 

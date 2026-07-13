@@ -31,8 +31,12 @@ def build_single_provider(name: str, settings: Settings) -> BaseAIProvider:
         from app.providers.anthropic_provider import AnthropicProvider
 
         return AnthropicProvider(api_key=settings.anthropic_api_key, model=settings.anthropic_model)
+    if name == "demo":
+        from app.providers.demo import DemoProvider
+
+        return DemoProvider()
     raise AIProviderError(
-        f"Unknown AI provider '{name}'. Valid options: gemini, openai, anthropic."
+        f"Unknown AI provider '{name}'. Valid options: gemini, openai, anthropic, demo."
     )
 
 

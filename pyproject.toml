@@ -73,6 +73,10 @@ Repository = "https://github.com/Thijsn04/MediClear-AI"
 where = ["."]
 include = ["app*"]
 
+[tool.setuptools.package-data]
+"app.data" = ["*.json"]
+"app.static" = ["**/*"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 asyncio_mode = "auto"

@@ -56,7 +56,8 @@ class Settings(BaseSettings):
     # ── AI Provider selection ─────────────────────────────────────────────────
     # gemini | openai | anthropic. For OpenAI-compatible servers (Ollama, Azure,
     # Groq, vLLM, LM Studio) use AI_PROVIDER=openai + OPENAI_BASE_URL.
-    ai_provider: Literal["gemini", "openai", "anthropic"] = Field(
+    # `demo` uses a built-in canned provider so the UI runs with no API key.
+    ai_provider: Literal["gemini", "openai", "anthropic", "demo"] = Field(
         default="gemini", alias="AI_PROVIDER"
     )
     # Optional ordered fallback chain, e.g. "openai,anthropic". If the primary
@@ -89,6 +90,14 @@ class Settings(BaseSettings):
     )
     enforce_reading_level: bool = Field(default=True, alias="ENFORCE_READING_LEVEL")
     max_simplification_passes: int = Field(default=1, alias="MAX_SIMPLIFICATION_PASSES")
+
+    # ── Terminology grounding ─────────────────────────────────────────────────
+    # Back key-term definitions with a curated source so they are not invented.
+    # The bundled offline glossary always applies; the online lookup (MedlinePlus)
+    # is opt-in and only used when internet egress is allowed.
+    terminology_enabled: bool = Field(default=True, alias="TERMINOLOGY_ENABLED")
+    terminology_online: bool = Field(default=False, alias="TERMINOLOGY_ONLINE")
+    terminology_timeout_seconds: float = Field(default=4.0, alias="TERMINOLOGY_TIMEOUT_SECONDS")
 
     # ── Result cache ──────────────────────────────────────────────────────────
     # Identical (document, language, level, model) requests reuse a cached result
