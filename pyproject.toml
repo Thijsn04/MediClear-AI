@@ -1,18 +1,18 @@
 [build-system]
 requires = ["setuptools>=68", "wheel"]
-build-backend = "setuptools.backends.legacy:build"
+build-backend = "setuptools.build_meta"
 
 [project]
 name = "mediclear-ai"
-version = "2.0.0"
-description = "Enterprise-grade medical document simplification for hospitals and clinics."
+version = "3.0.0"
+description = "State-of-the-art medical document simplification - cloud or on-prem, API-first."
 readme = "README.md"
 license = { file = "LICENSE" }
 authors = [{ name = "Thijs Nannings" }]
 requires-python = ">=3.11"
-keywords = ["medical", "ai", "healthcare", "nlp", "fastapi"]
+keywords = ["medical", "ai", "healthcare", "nlp", "fastapi", "patient-education"]
 classifiers = [
-    "Development Status :: 5 - Production/Stable",
+    "Development Status :: 4 - Beta",
     "Intended Audience :: Healthcare Industry",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
@@ -23,27 +23,45 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
     "Topic :: Scientific/Engineering :: Medical Science Apps.",
 ]
+
+# Core runtime only - AI provider SDKs and optional features are extras, so a
+# minimal deployment (e.g. an on-prem Ollama box) installs only what it needs.
 dependencies = [
     "fastapi>=0.115.0",
     "uvicorn[standard]>=0.30.0",
     "python-multipart>=0.0.27",
     "pydantic-settings>=2.4.0",
     "python-dotenv>=1.0.0",
-    "google-generativeai>=0.8.0",
-    "openai>=1.50.0",
-    "anthropic>=0.34.0",
     "pypdf>=4.0.0",
     "Pillow>=10.0.0",
-    "gTTS>=2.5.0",
     "structlog>=24.0.0",
     "httpx>=0.27.0",
 ]
 
 [project.optional-dependencies]
+gemini = ["google-generativeai>=0.8.0"]
+openai = ["openai>=1.50.0"]          # also covers Ollama / Azure / Groq / vLLM
+anthropic = ["anthropic>=0.34.0"]
+redis = ["redis>=5.0.0"]
+ocr = ["pytesseract>=0.3.10", "pdf2image>=1.17.0"]
+tts-cloud = ["gTTS>=2.5.0"]
+tts-local = ["pyttsx3>=2.90"]
+metrics = ["prometheus-client>=0.20.0"]
+all = [
+    "google-generativeai>=0.8.0",
+    "openai>=1.50.0",
+    "anthropic>=0.34.0",
+    "redis>=5.0.0",
+    "gTTS>=2.5.0",
+    "prometheus-client>=0.20.0",
+]
 dev = [
     "pytest>=8.0.0",
     "pytest-asyncio>=0.23.0",
     "httpx>=0.27.0",
+    "ruff>=0.6.0",
+    "mypy>=1.11.0",
+    "coverage>=7.5.0",
 ]
 
 [project.urls]
@@ -51,13 +69,42 @@ Homepage = "https://github.com/Thijsn04/MediClear-AI"
 Repository = "https://github.com/Thijsn04/MediClear-AI"
 "Bug Tracker" = "https://github.com/Thijsn04/MediClear-AI/issues"
 
-[project.scripts]
-mediclear = "app.main:app"
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["app*"]
+
+[tool.setuptools.package-data]
+"app.data" = ["*.json"]
+"app.static" = ["**/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 asyncio_mode = "auto"
 
-[tool.setuptools.packages.find]
-where = ["."]
-include = ["app*"]
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "C4", "SIM"]
+ignore = [
+    "B008",   # FastAPI uses function calls (Depends/File/Form) in defaults
+    "UP042",  # str+Enum kept for broad JSON-serialisation compatibility
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Translations contain long, unbreakable localized strings.
+"app/i18n/translations.py" = ["E501"]
+# The prompt embeds a JSON schema example that reads best unwrapped.
+"app/providers/prompts.py" = ["E501"]
+
+[tool.mypy]
+python_version = "3.11"
+warn_unused_ignores = false
+ignore_missing_imports = true
+check_untyped_defs = true
+exclude = ["tests/"]
+
+[tool.coverage.run]
+source = ["app"]
+omit = ["app/static/*"]

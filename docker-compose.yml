@@ -1,15 +1,20 @@
 # ════════════════════════════════════════════════════════════
-# MediClear AI — Docker Compose
+# MediClear AI - Docker Compose
 #
-# Quick start:
-#   cp .env.example .env   # edit with your API key & provider
+#   cp .env.example .env   # set AI_PROVIDER + key/model
 #   docker compose up -d
 #   open http://localhost:8000
+#
+# Uncomment the `redis` service (and REDIS_URL in .env) for durable,
+# multi-instance sessions / cache / rate limiting.
 # ════════════════════════════════════════════════════════════
 
 services:
   mediclear:
-    build: .
+    build:
+      context: .
+      args:
+        EXTRAS: "gemini,openai,anthropic,metrics"
     image: mediclear-ai:latest
     container_name: mediclear-ai
     restart: unless-stopped
@@ -27,6 +32,11 @@ services:
       timeout: 10s
       retries: 3
       start_period: 10s
-    # Uncomment to persist logs
-    # volumes:
-    #   - ./logs:/app/logs
+    # depends_on:
+    #   - redis
+
+  # redis:
+  #   image: redis:7-alpine
+  #   restart: unless-stopped
+  #   command: ["redis-server", "--save", "", "--appendonly", "no"]
+  #   # PHI note: with no persistence, session data lives only in memory.

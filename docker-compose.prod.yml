@@ -1,0 +1,61 @@
+# ===========================================================================
+# MediClear AI: production Docker Compose with Redis enabled.
+#
+#   cp .env.example .env      # set AI_PROVIDER + key/model + API_KEYS
+#   docker compose -f docker-compose.prod.yml up -d
+#
+# Differences from docker-compose.yml (the simple single-node file):
+#   - Redis is enabled for durable sessions / cache / rate limiting.
+#   - Resource limits and restart policies are set.
+#   - REDIS_URL is injected so the app uses the shared store.
+# Put a TLS-terminating reverse proxy (see deploy/nginx/) in front in production.
+# ===========================================================================
+
+services:
+  mediclear:
+    build:
+      context: .
+      args:
+        EXTRAS: "gemini,openai,anthropic,redis,metrics"
+    image: mediclear-ai:latest
+    restart: always
+    depends_on:
+      redis:
+        condition: service_healthy
+    ports:
+      - "${PORT:-8000}:8000"
+    env_file:
+      - .env
+    environment:
+      - HOST=0.0.0.0
+      - PORT=8000
+      - ENVIRONMENT=production
+      - REDIS_URL=redis://redis:6379/0
+    healthcheck:
+      test: ["CMD", "python", "-c",
+             "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
+
+  redis:
+    image: redis:7-alpine
+    restart: always
+    # PHI note: persistence disabled; session data lives only in memory.
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M

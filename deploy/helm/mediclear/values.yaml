@@ -1,0 +1,121 @@
+# Default values for MediClear AI.
+# Override with: helm install mediclear ./deploy/helm/mediclear -f my-values.yaml
+
+replicaCount: 2
+
+image:
+  repository: mediclear-ai
+  tag: "3.0.0"
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+# ── Application configuration (becomes env vars via a ConfigMap) ─────────────
+# Only non-secret settings go here. See deploy/helm/mediclear/templates/secret.yaml
+# for API keys, which come from `secrets` below.
+config:
+  AI_PROVIDER: "openai"
+  OPENAI_MODEL: "gpt-4o"
+  OPENAI_BASE_URL: ""
+  TARGET_READING_LEVEL: "B1"
+  ENFORCE_READING_LEVEL: "true"
+  TERMINOLOGY_ENABLED: "true"
+  TERMINOLOGY_ONLINE: "false"
+  REQUIRE_API_KEY: "true"
+  RATE_LIMIT_ENABLED: "true"
+  RATE_LIMIT_REQUESTS: "60"
+  ZERO_RETENTION: "false"
+  METRICS_ENABLED: "true"
+  ENABLE_FRONTEND: "true"
+  ENVIRONMENT: "production"
+  ALLOWED_ORIGINS: '["*"]'
+  # REDIS_URL is injected automatically when redis.enabled=true.
+
+# ── Secrets (create a Kubernetes Secret) ─────────────────────────────────────
+# Prefer `existingSecret` referencing a Secret you manage out-of-band. If set,
+# the inline `secrets` map is ignored.
+existingSecret: ""
+secrets:
+  OPENAI_API_KEY: ""
+  GOOGLE_API_KEY: ""
+  ANTHROPIC_API_KEY: ""
+  API_KEYS: ""  # comma-separated
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 8000
+
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "12m"
+    # SSE streaming: disable proxy buffering so chat tokens flush immediately.
+    nginx.ingress.kubernetes.io/proxy-buffering: "off"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "120"
+  hosts:
+    - host: mediclear.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: mediclear-tls
+      hosts:
+        - mediclear.example.com
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    cpu: "1"
+    memory: 512Mi
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 6
+  targetCPUUtilizationPercentage: 75
+
+livenessProbe:
+  httpGet:
+    path: /api/v1/health
+    port: 8000
+  initialDelaySeconds: 10
+  periodSeconds: 30
+readinessProbe:
+  httpGet:
+    path: /api/v1/health
+    port: 8000
+  initialDelaySeconds: 5
+  periodSeconds: 10
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1001
+  fsGroup: 1001
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop: ["ALL"]
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+# ── Bundled Redis (durable sessions / cache / rate limiting) ─────────────────
+redis:
+  enabled: true
+  image: redis:7-alpine
+  port: 6379
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 250m
+      memory: 256Mi

@@ -1,182 +1,168 @@
 """
-Pydantic request / response schemas for the MediClear AI API.
+Request / response schemas for the MediClear AI API.
 
-Language codes follow IETF BCP 47 short codes (e.g. "en", "nl").
+The analysis response carries the full :class:`StructuredAnalysis` object
+*and* a rendered markdown convenience field, so programmatic consumers read
+structured fields while simple clients can display the markdown directly.
 """
 
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Literal, Optional
+from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator
 
-# ---------------------------------------------------------------------------
-# Supported languages
-# ---------------------------------------------------------------------------
+from app.models.analysis import StructuredAnalysis
+from app.models.languages import SUPPORTED_LANGUAGES, is_supported
 
-SUPPORTED_LANGUAGES: dict[str, str] = {
-    "en": "English",
-    "nl": "Nederlands",
-    "de": "Deutsch",
-    "fr": "Français",
-    "es": "Español",
-    "tr": "Türkçe",
-    "ar": "العربية",
-    "pl": "Polski",
-    "pt": "Português",
-    "it": "Italiano",
-    "zh": "中文",
-    "ja": "日本語",
-    "ko": "한국어",
-    "ru": "Русский",
-    "hi": "हिन्दी",
-}
+__all__ = [
+    "SUPPORTED_LANGUAGES",
+    "AnalyzeTextRequest",
+    "ChatRequest",
+    "AudioRequest",
+    "AnalyzeResponse",
+    "ChatResponse",
+    "HealthResponse",
+    "LanguageInfo",
+    "LanguagesResponse",
+    "SessionResponse",
+    "ErrorResponse",
+]
 
-# ---------------------------------------------------------------------------
-# Request models
-# ---------------------------------------------------------------------------
+_LEVELS = ("A2", "B1", "B2")
+
+
+def _validate_language(v: str) -> str:
+    if not is_supported(v):
+        raise ValueError(
+            f"Unsupported language code '{v}'. Supported: {', '.join(SUPPORTED_LANGUAGES)}."
+        )
+    return v
+
+
+# ── Requests ───────────────────────────────────────────────────────────────
 
 
 class AnalyzeTextRequest(BaseModel):
-    """Request body for plain-text document analysis."""
-
-    text: str = Field(
-        ...,
-        min_length=10,
-        max_length=50_000,
-        description="Medical text to be simplified.",
-        examples=["Patient has been diagnosed with type 2 diabetes mellitus…"],
-    )
-    language: str = Field(
-        default="en",
-        description=(
-            "Target language code for the simplified output "
-            f"(one of: {', '.join(SUPPORTED_LANGUAGES)})."
-        ),
-        examples=["en"],
-    )
+    text: str = Field(..., min_length=10, max_length=100_000)
+    language: str = Field(default="en")
+    reading_level: Literal["A2", "B1", "B2"] | None = Field(default=None)
 
     @field_validator("language")
     @classmethod
-    def validate_language(cls, v: str) -> str:
-        if v not in SUPPORTED_LANGUAGES:
-            supported = ", ".join(SUPPORTED_LANGUAGES)
-            raise ValueError(
-                f"Unsupported language code '{v}'. Supported codes: {supported}."
-            )
-        return v
+    def _check_language(cls, v: str) -> str:
+        return _validate_language(v)
 
 
 class ChatRequest(BaseModel):
-    """Request body for a follow-up chat message."""
-
-    message: str = Field(
-        ...,
-        min_length=1,
-        max_length=2_000,
-        description="Patient's follow-up question about the analysed document.",
-        examples=["Should I be worried about this result?"],
-    )
-    language: str = Field(
-        default="en",
-        description="Target language code for the response.",
-        examples=["en"],
-    )
+    message: str = Field(..., min_length=1, max_length=2_000)
+    language: str = Field(default="en")
 
     @field_validator("language")
     @classmethod
-    def validate_language(cls, v: str) -> str:
-        if v not in SUPPORTED_LANGUAGES:
-            supported = ", ".join(SUPPORTED_LANGUAGES)
-            raise ValueError(
-                f"Unsupported language code '{v}'. Supported codes: {supported}."
-            )
-        return v
+    def _check_language(cls, v: str) -> str:
+        return _validate_language(v)
 
 
 class AudioRequest(BaseModel):
-    """Request body for text-to-speech synthesis."""
-
-    text: str = Field(
-        ...,
-        min_length=1,
-        max_length=10_000,
-        description="Text to convert to speech.",
-    )
-    language: str = Field(
-        default="en",
-        description="Language code for TTS voice selection.",
-        examples=["en"],
-    )
+    text: str = Field(..., min_length=1, max_length=10_000)
+    language: str = Field(default="en")
 
     @field_validator("language")
     @classmethod
-    def validate_language(cls, v: str) -> str:
-        if v not in SUPPORTED_LANGUAGES:
-            supported = ", ".join(SUPPORTED_LANGUAGES)
-            raise ValueError(
-                f"Unsupported language code '{v}'. Supported codes: {supported}."
-            )
-        return v
+    def _check_language(cls, v: str) -> str:
+        return _validate_language(v)
 
 
-# ---------------------------------------------------------------------------
-# Response models
-# ---------------------------------------------------------------------------
+# ── Responses ──────────────────────────────────────────────────────────────
 
 
 class AnalyzeResponse(BaseModel):
-    """Response from a document analysis request."""
-
-    session_id: str = Field(
-        ..., description="Unique session identifier for follow-up chat."
+    session_id: str | None = Field(
+        default=None,
+        description="Session id for follow-up chat. Null in zero-retention mode.",
     )
-    analysis: str = Field(
-        ..., description="Simplified medical explanation in the requested language."
-    )
-    language: str = Field(..., description="Language code of the response.")
-    provider: str = Field(..., description="AI provider used for this analysis.")
-    model: str = Field(..., description="Exact model name used for this analysis.")
+    analysis: StructuredAnalysis = Field(..., description="Structured analysis.")
+    markdown: str = Field(..., description="Rendered markdown view of the analysis.")
+    language: str
+    provider: str
+    model: str
+    cached: bool = False
 
 
 class ChatResponse(BaseModel):
-    """Response from a chat message."""
-
     session_id: str
-    message: str = Field(..., description="The patient's original question.")
-    response: str = Field(..., description="AI response in the requested language.")
+    message: str
+    response: str
     language: str
 
 
 class HealthResponse(BaseModel):
-    """API health-check response."""
-
     status: Literal["healthy", "degraded", "unhealthy"]
     version: str
     ai_provider: str
     ai_model: str
     ai_provider_configured: bool
+    ai_provider_reachable: bool | None = None
+    session_store: str
     active_sessions: int
     timestamp: datetime
 
 
 class LanguageInfo(BaseModel):
-    """A supported language entry."""
-
     code: str
     name: str
+    english_name: str
+    rtl: bool
 
 
 class LanguagesResponse(BaseModel):
-    """All languages supported by the API."""
-
     languages: list[LanguageInfo]
 
 
-class ErrorResponse(BaseModel):
-    """Standard error payload."""
+class SessionResponse(BaseModel):
+    session_id: str
+    provider: str
+    model: str
+    language: str
+    message_count: int
+    created_at: datetime
 
+
+class BatchAnalyzeItem(BaseModel):
+    text: str = Field(..., min_length=10, max_length=100_000)
+    language: str = Field(default="en")
+    reading_level: Literal["A2", "B1", "B2"] | None = Field(default=None)
+
+    @field_validator("language")
+    @classmethod
+    def _check_language(cls, v: str) -> str:
+        return _validate_language(v)
+
+
+class BatchAnalyzeRequest(BaseModel):
+    items: list[BatchAnalyzeItem] = Field(..., min_length=1, max_length=50)
+
+
+class JobItemResultSchema(BaseModel):
+    index: int
+    status: Literal["succeeded", "failed"]
+    markdown: str | None = None
+    analysis: StructuredAnalysis | None = None
+    error: str | None = None
+
+
+class JobResponse(BaseModel):
+    job_id: str
+    status: Literal["queued", "processing", "succeeded", "failed", "partial"]
+    total: int
+    completed: int
+    results: list[JobItemResultSchema] = Field(default_factory=list)
+    created_at: datetime
+
+
+class ErrorResponse(BaseModel):
     error: str
-    detail: Optional[str] = None
     status_code: int
+    request_id: str | None = None

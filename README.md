@@ -1,29 +1,37 @@
 <div align="center">
 
-# 💬 MediClear AI
+# MediClear AI
 
-**Enterprise-grade medical document simplification for hospitals and clinics**
+**Turn dense medical documents into clear, patient-friendly explanations. Cloud or on-prem. API-first.**
 
-A free, open-source FastAPI application that translates complex clinical language into simple, patient-friendly explanations (B1 level). Deployable on any infrastructure — from a hospital's private on-premises server to a public cloud — with full support for the AI model of your choice.
+A free, open-source FastAPI service that translates complex clinical language
+into plain explanations at a configurable reading level (A2/B1/B2), in 17
+languages, using the AI model of your choice. It returns structured JSON for
+integrations and a clean web UI for people.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115%2B-009688.svg?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
-[![Google Gemini](https://img.shields.io/badge/AI-Gemini%202.5-8E75B2.svg?logo=googlegemini&logoColor=white)](https://ai.google.dev/)
+[![CI](https://img.shields.io/badge/CI-ruff%20%C2%B7%20mypy%20%C2%B7%20pytest-2ea44f.svg)](.github/workflows/ci.yml)
 
 </div>
 
+<p align="center">
+  <img src="docs/images/ui-light.png" alt="MediClear AI, light theme" width="49%" />
+  <img src="docs/images/ui-dark.png" alt="MediClear AI, dark theme" width="49%" />
+</p>
+
 ---
 
-## Table of Contents
+## Contents
 
-- [Features](#features)
-- [Quick Start](#quick-start)
-- [AI Provider Configuration](#ai-provider-configuration)
-- [Frontend Toggle](#frontend-toggle)
-- [API Reference](#api-reference)
-- [Docker Deployment](#docker-deployment)
-- [Configuration Reference](#configuration-reference)
+- [Highlights](#highlights)
+- [Quick start](#quick-start)
+- [Manuals](#manuals)
+- [Deployment targets](#deployment-targets)
+- [AI provider configuration](#ai-provider-configuration)
+- [Using the API](#using-the-api)
+- [Configuration](#configuration)
 - [Development](#development)
 - [Architecture](#architecture)
 - [Contributing](#contributing)
@@ -31,320 +39,228 @@ A free, open-source FastAPI application that translates complex clinical languag
 
 ---
 
-## Features
+## Highlights
 
-- **Provider-agnostic AI** — bring your own model. Works with Google Gemini, OpenAI, Anthropic Claude, Ollama (local/on-premises), Azure OpenAI, Groq, Mistral, LM Studio, vLLM, and any other OpenAI-compatible API.
-- **Free model selection** — the model name is a plain string in your `.env` file. No hardcoded names, no code changes required when you upgrade models.
-- **Multi-language output** — 15 languages supported out of the box (English, Dutch, German, French, Spanish, Turkish, Arabic, Polish, Portuguese, Italian, Chinese, Japanese, Korean, Russian, Hindi).
-- **Multiple input types** — plain text paste, PDF upload, JPEG/PNG image upload.
-- **Chat follow-up** — after receiving an explanation, patients can ask follow-up questions in a conversation session.
-- **Text-to-speech** — listen to the explanation in any supported language.
-- **Optional frontend** — set `ENABLE_FRONTEND=false` for a pure REST API server; embed the UI elsewhere or build your own.
-- **OpenAPI documentation** — full interactive Swagger UI at `/api/docs`.
-- **Production-ready** — Docker support, structured JSON logging, CORS configuration, health-check endpoint, session TTL management.
+- **Structured output.** Every analysis is a typed object: summary, explanation,
+  key terms, action items, and (when present) lab values and medications, plus a
+  rendered markdown view and a readability assessment. Built for EHR and mobile
+  integration, not just display.
+- **Faithful, grounded, measured.** Key terms are flagged if they are not in the
+  source document, their definitions are backed by a bundled medical glossary
+  (or an optional MedlinePlus lookup), and output readability is scored and can
+  be re-simplified to hit a target reading level.
+- **Provider-agnostic.** Google Gemini, OpenAI, Anthropic Claude, and any
+  OpenAI-compatible server (Ollama, Azure, Groq, vLLM, LM Studio). Model names
+  are free strings. Add a fallback chain for resilience, or use the built-in
+  `demo` provider with no key at all.
+- **API-first platform.** API-key auth, rate limiting, SSE streaming chat,
+  session management, result caching, Prometheus metrics, unified errors.
+- **Privacy-conscious.** Zero-retention mode, audit logging (metadata only), a
+  fully offline / air-gapped path, and document content is never written to logs.
+- **17 languages**, right-to-left aware output, optional text-to-speech (cloud
+  or offline), and a clean light/dark web UI with no external dependencies.
+- **Production-ready.** Docker, Helm chart, Nginx TLS config, Redis-pluggable
+  state, health checks, structured JSON logging, and CI (ruff + mypy + pytest).
 
 ---
 
-## Quick Start
+## Quick start
 
-### With Docker (recommended)
+### Try it now (no API key)
 
 ```bash
-# 1. Clone
-git clone https://github.com/Thijsn04/MediClear-AI.git
-cd MediClear-AI
+git clone https://github.com/Thijsn04/MediClear-AI.git && cd MediClear-AI
+pip install -e .
+AI_PROVIDER=demo uvicorn app.main:app
+# open http://localhost:8000
+```
 
-# 2. Configure
-cp .env.example .env
-# Edit .env — set AI_PROVIDER and the matching API key + model name
+The `demo` provider returns a realistic canned analysis so you can explore the
+full UI and API before wiring up a real model.
 
-# 3. Run
+### With Docker
+
+```bash
+cp .env.example .env          # set AI_PROVIDER + key + model
 docker compose up -d
-
-# 4. Open
-open http://localhost:8000
+open http://localhost:8000     # UI. API docs at /api/docs
 ```
 
 ### Without Docker
 
 ```bash
-# Requires Python 3.11+
-git clone https://github.com/Thijsn04/MediClear-AI.git
-cd MediClear-AI
-
-python -m venv .venv
-source .venv/bin/activate          # Windows: .venv\Scripts\activate
-
-pip install -r requirements.txt
-
+python -m venv .venv && source .venv/bin/activate
+pip install '.[openai]'        # core + one provider (see extras below)
 cp .env.example .env
-# Edit .env — set AI_PROVIDER and the matching API key + model name
-
 uvicorn app.main:app --reload
-# open http://localhost:8000
 ```
 
-The interactive API documentation is available at **`http://localhost:8000/api/docs`**.
+**Install extras** (install only what you need):
+`gemini` &middot; `openai` &middot; `anthropic` &middot; `redis` &middot; `ocr`
+&middot; `tts-cloud` &middot; `tts-local` &middot; `metrics` &middot; `all`
+&middot; `dev`. Example: `pip install '.[all,dev]'`.
 
 ---
 
-## AI Provider Configuration
+## Manuals
 
-MediClear AI supports three providers. Set `AI_PROVIDER` to select one, then supply the corresponding key and model. **The model name is a free string — use any model your API key or server supports.**
+| Guide | For |
+|-------|-----|
+| [Usage guide](docs/usage.md) | patients, integrators, and operators (with code samples) |
+| [Configuration reference](docs/configuration.md) | every environment variable |
+| [API reference](docs/api.md) | endpoints, schema, errors |
+| [Architecture](docs/architecture.md) | how it fits together |
+| [Deployment](deploy/README.md) | Docker, Compose, Helm, Nginx |
 
-### Google Gemini
+---
 
-```env
-AI_PROVIDER=gemini
-GOOGLE_API_KEY=your-key-here
-GEMINI_MODEL=gemini-2.5-flash       # or gemini-2.5-pro, gemini-1.5-pro, ...
-```
+## Deployment targets
 
-### OpenAI
+Both are reachable by configuration alone, from one codebase.
 
-```env
-AI_PROVIDER=openai
-OPENAI_API_KEY=your-key-here
-OPENAI_MODEL=gpt-4o                 # or gpt-4.1, o3, gpt-4o-mini, ...
-```
-
-### Anthropic Claude
-
-```env
-AI_PROVIDER=anthropic
-ANTHROPIC_API_KEY=your-key-here
-ANTHROPIC_MODEL=claude-opus-4-5     # or claude-sonnet-4-5, claude-3-5-haiku-20241022, ...
-```
-
-### Ollama (local / on-premises)
-
-Hospitals and clinics that cannot send patient data to external APIs can run MediClear AI entirely on-premises using [Ollama](https://ollama.com):
-
+**Cloud, API-first**
 ```env
 AI_PROVIDER=openai
-OPENAI_API_KEY=ollama               # Ollama ignores the key value
-OPENAI_BASE_URL=http://localhost:11434/v1
-OPENAI_MODEL=llama3.2               # or mistral, phi4, qwen2.5, meditron, ...
-```
-
-Start Ollama and pull a model before starting MediClear AI:
-```bash
-ollama serve
-ollama pull llama3.2
-```
-
-### Azure OpenAI
-
-```env
-AI_PROVIDER=openai
-OPENAI_API_KEY=your-azure-key
-OPENAI_BASE_URL=https://<resource>.openai.azure.com/openai/deployments/<deployment>
+OPENAI_API_KEY=sk-...
 OPENAI_MODEL=gpt-4o
+REQUIRE_API_KEY=true
+API_KEYS=key-for-team-a,key-for-team-b
+REDIS_URL=redis://redis:6379/0
+ALLOWED_ORIGINS=["https://app.example.com"]
 ```
 
-### Other OpenAI-compatible servers
-
-Any server that implements the OpenAI Chat Completions API works with `AI_PROVIDER=openai` + `OPENAI_BASE_URL`. Examples: Groq, Together AI, Mistral AI, LM Studio, vLLM.
+**On-prem / air-gapped (PHI never leaves your network)**
+```env
+AI_PROVIDER=openai
+OPENAI_API_KEY=ollama
+OPENAI_BASE_URL=http://localhost:11434/v1
+OPENAI_MODEL=llama3.2
+TTS_BACKEND=local
+TERMINOLOGY_ONLINE=false
+ZERO_RETENTION=true
+```
+The web UI ships with no CDN dependencies, so it works fully offline.
 
 ---
 
-## Frontend Toggle
+## AI provider configuration
 
-By default MediClear AI serves a built-in web UI at `/`. To run as a **pure REST API** (no HTML served), set:
+Set `AI_PROVIDER` and the matching key/model. The model name is a free string.
 
 ```env
-ENABLE_FRONTEND=false
+# Gemini
+AI_PROVIDER=gemini
+GOOGLE_API_KEY=...
+GEMINI_MODEL=gemini-2.5-flash
+
+# OpenAI (or Ollama / Azure / Groq / vLLM / LM Studio via OPENAI_BASE_URL)
+AI_PROVIDER=openai
+OPENAI_API_KEY=...
+OPENAI_MODEL=gpt-4o
+
+# Anthropic
+AI_PROVIDER=anthropic
+ANTHROPIC_API_KEY=...
+ANTHROPIC_MODEL=claude-sonnet-4-5
+
+# Optional: try these in order if the primary fails
+AI_FALLBACK_PROVIDERS=anthropic,gemini
 ```
 
-This is useful when:
-- You are building a custom frontend or embedding MediClear in an existing hospital portal.
-- You are consuming the API programmatically (EHR integration, mobile app, etc.).
-- You want to serve the frontend from a CDN or separate Nginx instance.
-
-When the frontend is disabled, all `/api/v1/*` endpoints continue to work normally. The OpenAPI documentation at `/api/docs` is always available regardless of this setting.
+See [docs/configuration.md](docs/configuration.md) for OpenAI-compatible base URLs.
 
 ---
 
-## API Reference
+## Using the API
 
-The full interactive API documentation is at **`/api/docs`** (Swagger UI) and **`/api/redoc`** (ReDoc).
-
-### Key endpoints
-
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET`  | `/api/v1/health` | Health check — provider status, active sessions |
-| `GET`  | `/api/v1/languages` | List all supported language codes |
-| `POST` | `/api/v1/analyze` | Analyse a document (text or file upload) |
-| `POST` | `/api/v1/chat/{session_id}` | Follow-up question in a session |
-| `POST` | `/api/v1/audio` | Text-to-speech synthesis (returns MP3) |
-
-### Example: Analyse text
+Base path `/api/v1`. Interactive docs at `/api/docs`. Full guide with Python and
+JavaScript samples: [docs/usage.md](docs/usage.md).
 
 ```bash
+# Analyse text into a structured result
 curl -X POST http://localhost:8000/api/v1/analyze \
   -F "text=The patient presents with acute myocardial infarction." \
-  -F "language=en"
-```
+  -F "language=en" -F "reading_level=B1"
 
-Response:
-```json
-{
-  "session_id": "a1b2c3d4-...",
-  "analysis": "## Summary\nThis document describes a heart attack...",
-  "language": "en",
-  "provider": "gemini",
-  "model": "gemini-2.5-flash"
-}
-```
-
-### Example: Follow-up chat
-
-```bash
-curl -X POST http://localhost:8000/api/v1/chat/a1b2c3d4-... \
+# Streamed follow-up (Server-Sent Events)
+curl -N -X POST http://localhost:8000/api/v1/chat/$SESSION/stream \
   -H "Content-Type: application/json" \
   -d '{"message": "Should I be worried?", "language": "en"}'
 ```
 
-### Example: Upload a PDF
-
-```bash
-curl -X POST http://localhost:8000/api/v1/analyze \
-  -F "file=@discharge_summary.pdf" \
-  -F "language=nl"
-```
-
----
-
-## Docker Deployment
-
-```bash
-cp .env.example .env   # configure your provider
-docker compose up -d
-```
-
-For a pure API-only deployment:
-
-```bash
-docker run -d \
-  -p 8000:8000 \
-  -e AI_PROVIDER=openai \
-  -e OPENAI_API_KEY=sk-... \
-  -e OPENAI_MODEL=gpt-4o \
-  -e ENABLE_FRONTEND=false \
-  mediclear-ai:latest
-```
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET`  | `/api/v1/health` | Provider and session-store status |
+| `GET`  | `/api/v1/languages` | Supported languages |
+| `POST` | `/api/v1/analyze` | Analyse text or file into a structured result |
+| `POST` | `/api/v1/chat/{session_id}` | Follow-up question (grounded) |
+| `POST` | `/api/v1/chat/{session_id}/stream` | Streaming follow-up (SSE) |
+| `GET`/`DELETE` | `/api/v1/sessions/{session_id}` | Inspect / purge a session |
+| `POST` | `/api/v1/audio` | Text-to-speech |
+| `GET`  | `/metrics` | Prometheus metrics |
 
 ---
 
-## Configuration Reference
+## Configuration
 
-All settings are environment variables (or entries in `.env`).
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `AI_PROVIDER` | `gemini` | Active provider: `gemini`, `openai`, or `anthropic` |
-| `GOOGLE_API_KEY` | — | Google AI Studio API key |
-| `GEMINI_MODEL` | `gemini-2.5-flash` | Any Gemini model name |
-| `OPENAI_API_KEY` | — | OpenAI API key (or `ollama` for Ollama) |
-| `OPENAI_MODEL` | `gpt-4o` | Any model accepted by the target API |
-| `OPENAI_BASE_URL` | — | Override for compatible APIs (Ollama, Azure, Groq...) |
-| `ANTHROPIC_API_KEY` | — | Anthropic API key |
-| `ANTHROPIC_MODEL` | `claude-opus-4-5` | Any Anthropic model name |
-| `ENABLE_FRONTEND` | `true` | Set `false` for pure REST API mode |
-| `SESSION_TTL_SECONDS` | `3600` | Chat session expiry (seconds) |
-| `MAX_SESSIONS` | `1000` | Maximum concurrent in-memory sessions |
-| `MAX_UPLOAD_SIZE_MB` | `10` | Maximum file upload size |
-| `ALLOWED_ORIGINS` | `["*"]` | CORS allowed origins (restrict in production) |
-| `DEBUG` | `false` | Enable debug logging |
-| `HOST` | `0.0.0.0` | Server bind address |
-| `PORT` | `8000` | Server port |
+Every setting is an environment variable. Full table in
+[docs/configuration.md](docs/configuration.md). Highlights: `AI_PROVIDER`,
+`TARGET_READING_LEVEL`, `TERMINOLOGY_*`, `REQUIRE_API_KEY`/`API_KEYS`,
+`RATE_LIMIT_*`, `REDIS_URL`, `ZERO_RETENTION`, `TTS_BACKEND`, `ENABLE_FRONTEND`,
+`ALLOWED_ORIGINS`.
 
 ---
 
 ## Development
 
-### Setup
-
 ```bash
-git clone https://github.com/Thijsn04/MediClear-AI.git
-cd MediClear-AI
-python -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
-cp .env.example .env
+pip install '.[all,ocr,tts-local,dev]'
+
+ruff check app/ tests/       # lint
+ruff format --check app/ tests/
+mypy app/                    # type check
+pytest -q                    # tests (no API keys needed; uses a MockProvider)
 ```
 
-### Running tests
+CI runs the same gate on Python 3.11 and 3.12, plus a Docker build.
 
-```bash
-pytest tests/ -v
-```
+### Adding a provider
 
-Tests use a `MockProvider` that returns deterministic responses without requiring any API keys.
-
-### Project structure
-
-```
-app/
-├── main.py                   # FastAPI application factory
-├── config.py                 # All configuration (env vars)
-├── dependencies.py           # Dependency injection
-├── api/v1/endpoints/         # HTTP endpoints
-├── core/                     # Exceptions, logging
-├── models/schemas.py         # Pydantic models
-├── providers/                # AI provider implementations
-├── services/                 # Business logic
-├── i18n/translations.py      # UI translations
-└── static/                   # Optional HTML/CSS/JS frontend
-tests/                        # pytest test suite
-```
-
-### Adding a new AI provider
-
-1. Create `app/providers/my_provider.py` extending `BaseAIProvider`.
-2. Register it in `build_provider()` in `app/services/ai_service.py`.
-3. Add the new literal to the `ai_provider` field in `app/config.py`.
-4. Document the configuration in `.env.example` and this README.
+Providers are thin: implement one `_complete` (and optionally `_stream`)
+primitive and the base class handles prompts, JSON parsing, and grounding. See
+[CONTRIBUTING.md](CONTRIBUTING.md) and [docs/architecture.md](docs/architecture.md).
 
 ---
 
 ## Architecture
 
-```
-HTTP Request
-    │
-    ▼
-FastAPI Endpoint  (app/api/v1/endpoints/)
-    │
-    ▼
-AIService         (app/services/ai_service.py)
-    │  manages sessions, selects provider
-    ▼
-BaseAIProvider    (app/providers/)
-    │  formats prompt, calls AI API
-    ▼
-AI API            (Gemini / OpenAI / Anthropic / Ollama / ...)
-```
+A layered FastAPI app. Providers are thin; the base class owns prompt building,
+JSON parsing, and grounding. State (sessions, cache, rate limit) is pluggable
+between in-memory and Redis. Full diagram and request lifecycle in
+[docs/architecture.md](docs/architecture.md).
 
 ---
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md).
+See [CONTRIBUTING.md](CONTRIBUTING.md) and [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
+Security reports: [SECURITY.md](SECURITY.md).
 
 ---
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT. See [LICENSE](LICENSE).
 
 ---
 
-> **Medical disclaimer:** MediClear AI is an educational tool. It does not constitute medical advice and must not be used as a substitute for consultation with a qualified healthcare professional. Always refer medical decisions to a licensed clinician.
-
+> **Medical disclaimer:** MediClear AI is an educational tool. It does not
+> constitute medical advice and must not be used as a substitute for consultation
+> with a qualified healthcare professional. Always refer medical decisions to a
+> licensed clinician.
 
 ---
 
 <div align="center">
-<sub>Built by <a href="https://github.com/Thijsn04">Thijs Nannings</a> · Medical Informatics @ UvA · <a href="https://lythos.nl">Lythos</a></sub>
+<sub>Built by <a href="https://github.com/Thijsn04">Thijs Nannings</a> &middot; Medical Informatics @ UvA &middot; <a href="https://lythos.nl">Lythos</a></sub>
 </div>

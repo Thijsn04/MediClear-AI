@@ -1,7 +1,19 @@
-# MediClear AI — Python Dependencies
+# MediClear AI - Core runtime dependencies
 #
-# Install:  pip install -r requirements.txt
-# Dev/test: pip install -r requirements.txt pytest pytest-asyncio httpx
+# This file installs ONLY the core server. AI provider SDKs and optional
+# features are extras so you install just what your deployment needs.
+#
+#   pip install -r requirements.txt                 # core only
+#   pip install '.[openai]'                          # + OpenAI-compatible (Ollama, Azure, Groq…)
+#   pip install '.[gemini]'                          # + Google Gemini
+#   pip install '.[anthropic]'                       # + Anthropic Claude
+#   pip install '.[redis]'                           # + durable sessions/cache/rate-limit
+#   pip install '.[ocr]'                             # + OCR for scanned PDFs
+#   pip install '.[tts-cloud]' | '.[tts-local]'      # + text-to-speech
+#   pip install '.[metrics]'                         # + Prometheus /metrics
+#   pip install '.[all,dev]'                         # everything + test/lint tooling
+#
+# See pyproject.toml [project.optional-dependencies] for the authoritative list.
 
 # ── Web framework ──────────────────────────────────────────────────────────
 fastapi>=0.115.0
@@ -12,22 +24,9 @@ python-multipart>=0.0.27
 pydantic-settings>=2.4.0
 python-dotenv>=1.0.0
 
-# ── AI Providers (install only what you need) ──────────────────────────────
-# Google Gemini
-google-generativeai>=0.8.0
-
-# OpenAI / Azure OpenAI / Ollama / Groq / any OpenAI-compatible API
-openai>=1.50.0
-
-# Anthropic Claude
-anthropic>=0.34.0
-
 # ── Document processing ────────────────────────────────────────────────────
 pypdf>=4.0.0
 Pillow>=10.0.0
-
-# ── Text-to-speech ─────────────────────────────────────────────────────────
-gTTS>=2.5.0
 
 # ── Observability ─────────────────────────────────────────────────────────
 structlog>=24.0.0

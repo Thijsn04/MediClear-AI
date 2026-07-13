@@ -1,76 +1,61 @@
 """
-AI service — provider selection and orchestration.
+AI service - orchestration.
 
-This module is the single point of contact between the API layer and the
-AI providers.  It reads configuration, instantiates the correct provider,
-and delegates to it.
+The single point of contact between the API layer and everything below it.
+It owns the end-to-end analysis pipeline:
+
+    cache lookup → provider analysis → readability enforcement →
+    cache store → session creation (unless zero-retention)
+
+and the follow-up chat pipeline (grounded in the stored document context).
 """
 
 from __future__ import annotations
 
+import hashlib
+from collections.abc import AsyncIterator
+from dataclasses import dataclass
+
 from app.config import Settings
-from app.core.exceptions import AIProviderError
+from app.core.exceptions import ChatDisabledError
 from app.core.logging import get_logger
-from app.models.schemas import SUPPORTED_LANGUAGES
+from app.models.analysis import StructuredAnalysis
+from app.models.languages import get_language
 from app.providers.base import BaseAIProvider, ProcessedDocument
+from app.services import readability as readability_mod
+from app.services.cache import ResultCache, make_key
 from app.services.session_store import ChatSession, SessionStore
+from app.services.streaming import ExplanationStreamExtractor
+from app.services.terminology import TerminologyService
 
 logger = get_logger(__name__)
 
 
-def build_provider(settings: Settings) -> BaseAIProvider:
-    """
-    Instantiate the AI provider selected by AI_PROVIDER.
-
-    The returned object is *not* validated here — configuration errors
-    are surfaced lazily when the first request is made, so the server
-    can still start (and return informative health-check responses) even
-    when credentials are absent.
-    """
-    provider_name = settings.ai_provider
-
-    if provider_name == "gemini":
-        from app.providers.gemini import GeminiProvider
-        return GeminiProvider(
-            api_key=settings.google_api_key,
-            model=settings.gemini_model,
-        )
-
-    if provider_name == "openai":
-        from app.providers.openai_provider import OpenAIProvider
-        return OpenAIProvider(
-            api_key=settings.openai_api_key,
-            model=settings.openai_model,
-            base_url=settings.openai_base_url,
-        )
-
-    if provider_name == "anthropic":
-        from app.providers.anthropic_provider import AnthropicProvider
-        return AnthropicProvider(
-            api_key=settings.anthropic_api_key,
-            model=settings.anthropic_model,
-        )
-
-    raise AIProviderError(
-        f"Unknown AI provider '{provider_name}'. "
-        "Valid options: gemini, openai, anthropic."
-    )
+@dataclass
+class AnalysisOutcome:
+    analysis: StructuredAnalysis
+    session_id: str | None
+    provider: str
+    model: str
+    cached: bool
+    input_tokens: int
+    output_tokens: int
 
 
 class AIService:
-    """Orchestrates document analysis and chat across providers and sessions."""
-
     def __init__(
         self,
         provider: BaseAIProvider,
         session_store: SessionStore,
+        cache: ResultCache,
+        settings: Settings,
+        terminology: TerminologyService | None = None,
     ) -> None:
         self._provider = provider
         self._sessions = session_store
-
-    # ------------------------------------------------------------------
-    # Properties
-    # ------------------------------------------------------------------
+        self._cache = cache
+        self._settings = settings
+        self._terminology = terminology
 
     @property
     def provider(self) -> BaseAIProvider:
@@ -81,91 +66,230 @@ class AIService:
         return self._sessions
 
     # ------------------------------------------------------------------
-    # Public API
+    # Analysis
     # ------------------------------------------------------------------
 
     async def analyze(
         self,
         document: ProcessedDocument,
         language: str,
-    ) -> ChatSession:
-        """
-        Analyse a document and create a chat session for follow-up questions.
+        target_level: str | None = None,
+    ) -> AnalysisOutcome:
+        target_level = target_level or self._settings.target_reading_level
+        language_name = get_language(language).english_name
 
-        Parameters
-        ----------
-        document:
-            Pre-processed document content.
-        language:
-            BCP 47 language code (e.g. 'en').
+        cache_key = self._cache_key(document, language, target_level)
+        cached = await self._cache.get(cache_key) if cache_key else None
 
-        Returns
-        -------
-        ChatSession
-            The newly created session containing the analysis result.
-        """
-        language_name = SUPPORTED_LANGUAGES.get(language, "English")
+        if cached is not None:
+            logger.info("ai_service.cache_hit", provider=self._provider.name)
+            analysis = cached
+            input_tokens = output_tokens = 0
+            was_cached = True
+        else:
+            result = await self._provider.analyze_document(
+                document,
+                language_name=language_name,
+                target_level=target_level,
+                max_tokens=self._settings.ai_max_output_tokens,
+                temperature=self._settings.ai_temperature,
+            )
+            analysis = result.analysis
+            input_tokens, output_tokens = result.input_tokens, result.output_tokens
+            was_cached = False
 
-        logger.info(
-            "ai_service.analyze",
+            analysis = await self._enforce_readability(
+                analysis, document, language_name, target_level
+            )
+            if self._terminology is not None:
+                analysis.key_terms = await self._terminology.enrich(analysis.key_terms, language)
+            if cache_key:
+                await self._cache.set(cache_key, analysis)
+
+        # Attach a fresh readability assessment for the response.
+        analysis.readability = readability_mod.assess(
+            analysis.explanation or analysis.summary, target_level
+        )
+
+        session_id = await self._maybe_create_session(document, analysis, language, language_name)
+        return AnalysisOutcome(
+            analysis=analysis,
+            session_id=session_id,
+            provider=self._provider.name,
+            model=self._provider.model,
+            cached=was_cached,
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
+        )
+
+    async def _enforce_readability(
+        self,
+        analysis: StructuredAnalysis,
+        document: ProcessedDocument,
+        language_name: str,
+        target_level: str,
+    ) -> StructuredAnalysis:
+        if not self._settings.enforce_reading_level:
+            return analysis
+        passes = self._settings.max_simplification_passes
+        for _ in range(max(0, passes)):
+            score = readability_mod.assess(analysis.explanation or analysis.summary, target_level)
+            if score.meets_target is not False:
+                break
+            logger.info(
+                "ai_service.simplify_pass",
+                estimated=score.estimated_cefr,
+                target=target_level,
+            )
+            analysis = await self._provider.simplify(
+                analysis,
+                language_name=language_name,
+                target_level=target_level,
+                max_tokens=self._settings.ai_max_output_tokens,
+                temperature=self._settings.ai_temperature,
+                source_text=document.text,
+            )
+        return analysis
+
+    async def _maybe_create_session(
+        self,
+        document: ProcessedDocument,
+        analysis: StructuredAnalysis,
+        language: str,
+        language_name: str,
+    ) -> str | None:
+        if self._settings.zero_retention:
+            return None
+        # Ground follow-up chat in the source text when we have it, else the
+        # rendered analysis (best available for image-only inputs).
+        document_context = document.text or analysis.render_markdown()
+        session = await self._sessions.create(
             provider=self._provider.name,
             model=self._provider.model,
             language=language,
-        )
-
-        result = await self._provider.analyze_document(document, language_name)
-
-        session = self._sessions.create(
-            provider=result.provider,
-            model=result.model,
-            language=language,
             language_name=language_name,
-            document_summary=result.text,
-            initial_history=result.initial_history,
+            document_context=document_context,
+            initial_history=[],
         )
-        return session
+        return session.id
 
-    async def chat(
-        self,
-        session_id: str,
-        message: str,
-        language: str,
-    ) -> str:
-        """
-        Continue a conversation within an existing session.
+    # ------------------------------------------------------------------
+    # Chat
+    # ------------------------------------------------------------------
 
-        Parameters
-        ----------
-        session_id:
-            Session identifier returned by a previous analyze call.
-        message:
-            The patient's question.
-        language:
-            BCP 47 language code for the response.
-
-        Returns
-        -------
-        str
-            The AI's answer.
-        """
-        session = self._sessions.get(session_id)
-        language_name = SUPPORTED_LANGUAGES.get(language, session.language_name)
-
-        logger.info(
-            "ai_service.chat",
-            session_id=session_id,
-            provider=self._provider.name,
-        )
+    async def chat(self, session_id: str, message: str, language: str) -> str:
+        if self._settings.zero_retention:
+            raise ChatDisabledError()
+        session = await self._sessions.get(session_id)
+        language_name = get_language(language).english_name if language else session.language_name
 
         response_text = await self._provider.chat(
             message=message,
-            document_summary=session.document_summary,
+            document_context=session.document_context,
             history=session.history,
             language_name=language_name,
+            max_tokens=self._settings.ai_max_output_tokens,
+            temperature=self._settings.ai_temperature,
+        )
+        await self._sessions.append_message(session_id, "user", message)
+        await self._sessions.append_message(session_id, "assistant", response_text)
+        return response_text
+
+    async def stream_chat(self, session_id: str, message: str, language: str) -> AsyncIterator[str]:
+        if self._settings.zero_retention:
+            raise ChatDisabledError()
+        session = await self._sessions.get(session_id)
+        language_name = get_language(language).english_name if language else session.language_name
+
+        collected: list[str] = []
+        async for chunk in self._provider.stream_chat(
+            message=message,
+            document_context=session.document_context,
+            history=session.history,
+            language_name=language_name,
+            max_tokens=self._settings.ai_max_output_tokens,
+            temperature=self._settings.ai_temperature,
+        ):
+            collected.append(chunk)
+            yield chunk
+
+        await self._sessions.append_message(session_id, "user", message)
+        await self._sessions.append_message(session_id, "assistant", "".join(collected))
+
+    async def stream_analyze(
+        self,
+        document: ProcessedDocument,
+        language: str,
+        target_level: str | None = None,
+    ) -> AsyncIterator[tuple[str, object]]:
+        """Stream an analysis. Yields ("delta", str) for progressive explanation
+        text, then ("result", AnalysisOutcome) once the full structured object is
+        ready. Falls back to a single ("result", ...) when the provider cannot
+        stream."""
+        target_level = target_level or self._settings.target_reading_level
+
+        if not self._provider.supports_streaming:
+            outcome = await self.analyze(document, language, target_level)
+            yield ("result", outcome)
+            return
+
+        language_name = get_language(language).english_name
+        accumulated: list[str] = []
+        extractor = ExplanationStreamExtractor()
+        async for chunk in self._provider.stream_analysis(
+            document,
+            language_name=language_name,
+            target_level=target_level,
+            max_tokens=self._settings.ai_max_output_tokens,
+            temperature=self._settings.ai_temperature,
+        ):
+            accumulated.append(chunk)
+            delta = extractor.feed("".join(accumulated))
+            if delta:
+                yield ("delta", delta)
+
+        analysis = self._provider.parse_analysis_text(
+            "".join(accumulated), source_text=document.text
+        )
+        if self._terminology is not None:
+            analysis.key_terms = await self._terminology.enrich(analysis.key_terms, language)
+        analysis.readability = readability_mod.assess(
+            analysis.explanation or analysis.summary, target_level
+        )
+        cache_key = self._cache_key(document, language, target_level)
+        if cache_key:
+            await self._cache.set(cache_key, analysis)
+        session_id = await self._maybe_create_session(document, analysis, language, language_name)
+        yield (
+            "result",
+            AnalysisOutcome(
+                analysis=analysis,
+                session_id=session_id,
+                provider=self._provider.name,
+                model=self._provider.model,
+                cached=False,
+                input_tokens=0,
+                output_tokens=0,
+            ),
         )
 
-        # Persist both turns in the session
-        self._sessions.append_message(session_id, role="user", content=message)
-        self._sessions.append_message(session_id, role="assistant", content=response_text)
+    async def get_session(self, session_id: str) -> ChatSession:
+        return await self._sessions.get(session_id)
 
-        return response_text
+    async def delete_session(self, session_id: str) -> None:
+        await self._sessions.delete(session_id)
+
+    # ------------------------------------------------------------------
+
+    def _cache_key(
+        self, document: ProcessedDocument, language: str, target_level: str
+    ) -> str | None:
+        if not self._settings.cache_enabled:
+            return None
+        if document.type == "text" and document.text:
+            content_hash = hashlib.sha256(document.text.encode()).hexdigest()
+        elif document.type == "image" and document.image:
+            content_hash = hashlib.sha256(document.image.b64_data.encode()).hexdigest()
+        else:
+            return None
+        return make_key(content_hash, language, target_level, self._provider.model)
