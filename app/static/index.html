@@ -4,196 +4,159 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="description" content="MediClear AI — Medical documents explained in plain language for patients." />
+  <meta name="color-scheme" content="light dark" />
+  <meta name="theme-color" content="#0f766e" />
   <title>MediClear AI</title>
 
-  <!-- No external CDNs: the UI renders the API's *structured* response directly
-       into the DOM (XSS-safe, no markdown parser), and uses a system font
-       stack — so the frontend works fully offline / air-gapped. -->
+  <!-- No external CDNs: the UI renders the API's structured response directly
+       into the DOM (XSS-safe, no markdown parser) and uses a system font stack,
+       so the frontend works fully offline / air-gapped. -->
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%E2%9A%95%EF%B8%8F%3C/text%3E%3C/svg%3E" />
   <link rel="stylesheet" href="/css/main.css" />
 </head>
 <body>
 
-<!-- ═══════════════════════════════════════════════════════════════════════ -->
-<!--  SKIP LINK (accessibility)                                             -->
-<!-- ═══════════════════════════════════════════════════════════════════════ -->
 <a href="#main-content" class="skip-link">Skip to main content</a>
 
-<!-- ═══════════════════════════════════════════════════════════════════════ -->
-<!--  HEADER                                                                -->
-<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- ── Header ────────────────────────────────────────────────────────────── -->
 <header class="site-header" role="banner">
   <div class="container header-inner">
-    <div class="header-brand">
-      <span class="brand-icon" aria-hidden="true">⚕</span>
-      <span class="brand-name">MediClear AI</span>
-    </div>
+    <a class="header-brand" href="/" aria-label="MediClear AI home">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 12h4l2 5 4-12 2 7h6" />
+        </svg>
+      </span>
+      <span class="brand-name">MediClear<span class="brand-ai">AI</span></span>
+    </a>
 
     <div class="header-controls">
       <label for="ui-language-select" class="visually-hidden">Interface language</label>
-      <select id="ui-language-select" class="lang-select" aria-label="Select interface language">
-        <!-- Populated by JS -->
-      </select>
+      <div class="select-wrap">
+        <select id="ui-language-select" class="select" aria-label="Interface language"></select>
+      </div>
+      <button id="theme-toggle" class="icon-btn" type="button" aria-label="Toggle dark mode" title="Toggle theme">
+        <span class="theme-icon theme-icon-light" aria-hidden="true">☀️</span>
+        <span class="theme-icon theme-icon-dark" aria-hidden="true">🌙</span>
+      </button>
     </div>
   </div>
 </header>
 
-<!-- ═══════════════════════════════════════════════════════════════════════ -->
-<!--  MAIN CONTENT                                                          -->
-<!-- ═══════════════════════════════════════════════════════════════════════ -->
 <main id="main-content" class="container" role="main">
 
-  <!-- Hero -->
+  <!-- ── Hero ──────────────────────────────────────────────────────────── -->
   <section class="hero" aria-labelledby="hero-title">
-    <h1 id="hero-title" data-i18n="hero_title">MediClear AI</h1>
-    <p class="hero-subtitle" data-i18n="hero_subtitle">Medical documents, explained simply.</p>
+    <span class="hero-eyebrow" data-i18n="disclaimer_badge">⚕ AI-assisted — always consult your healthcare provider</span>
+    <h1 id="hero-title" data-i18n="hero_title">Medical documents, explained simply.</h1>
     <p class="hero-desc" data-i18n="hero_desc"></p>
-    <div class="disclaimer-badge" role="note" aria-label="Disclaimer">
-      <span data-i18n="disclaimer_badge">⚕ AI-assisted — always consult your healthcare provider</span>
-    </div>
   </section>
 
-  <!-- ── Input card ── -->
+  <!-- ── Input card ────────────────────────────────────────────────────── -->
   <section class="card input-card" aria-labelledby="input-heading">
     <h2 id="input-heading" class="card-title" data-i18n="input_heading">Your medical document</h2>
 
-    <!-- Tab switcher -->
     <div class="tabs" role="tablist" aria-label="Input method">
-      <button
-        id="tab-text"
-        class="tab active"
-        role="tab"
-        aria-selected="true"
-        aria-controls="panel-text"
-        data-i18n="tab_text"
-      >Paste text</button>
-      <button
-        id="tab-file"
-        class="tab"
-        role="tab"
-        aria-selected="false"
-        aria-controls="panel-file"
-        data-i18n="tab_file"
-      >Upload file</button>
+      <button id="tab-text" class="tab active" role="tab" aria-selected="true" aria-controls="panel-text" data-i18n="tab_text">Paste text</button>
+      <button id="tab-file" class="tab" role="tab" aria-selected="false" aria-controls="panel-file" data-i18n="tab_file">Upload file</button>
     </div>
 
-    <!-- Text input panel -->
     <div id="panel-text" class="tab-panel" role="tabpanel" aria-labelledby="tab-text">
       <label for="text-input" class="visually-hidden" data-i18n="tab_text">Paste text</label>
-      <textarea
-        id="text-input"
-        class="text-area"
-        rows="8"
-        data-i18n-placeholder="placeholder_text"
-        placeholder="Paste the text from your doctor's letter or medical report here…"
-        aria-required="true"
-        spellcheck="false"
-      ></textarea>
+      <textarea id="text-input" class="text-area" rows="8" data-i18n-placeholder="placeholder_text"
+        placeholder="Paste the text from your doctor's letter or medical report here…" aria-required="true" spellcheck="false"></textarea>
     </div>
 
-    <!-- File upload panel -->
     <div id="panel-file" class="tab-panel hidden" role="tabpanel" aria-labelledby="tab-file">
-      <div
-        id="drop-zone"
-        class="drop-zone"
-        role="button"
-        tabindex="0"
-        aria-label="Upload a PDF, JPEG, or PNG file"
-        aria-describedby="upload-formats"
-      >
-        <div class="drop-zone-icon" aria-hidden="true">📄</div>
+      <div id="drop-zone" class="drop-zone" role="button" tabindex="0"
+        aria-label="Upload a PDF, JPEG, or PNG file" aria-describedby="upload-formats">
+        <div class="drop-zone-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><path d="M17 8l-5-5-5 5" /><path d="M12 3v12" />
+          </svg>
+        </div>
         <p class="drop-zone-text" data-i18n="upload_hint">Drop a PDF, JPEG, or PNG here — or click to browse</p>
         <p id="upload-formats" class="drop-zone-hint" data-i18n="upload_formats">Supported: PDF, JPEG, PNG · Max 10 MB</p>
-        <input
-          type="file"
-          id="file-input"
-          accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
-          class="file-input-hidden"
-          aria-hidden="true"
-          tabindex="-1"
-        />
+        <input type="file" id="file-input" accept=".pdf,.jpg,.jpeg,.png,.webp,application/pdf,image/jpeg,image/png,image/webp" class="file-input-hidden" aria-hidden="true" tabindex="-1" />
       </div>
       <div id="file-preview" class="file-preview hidden" aria-live="polite"></div>
     </div>
 
-    <!-- Language selector -->
-    <div class="input-footer">
-      <div class="language-control">
+    <div class="input-controls">
+      <div class="control">
+        <label class="control-label" data-i18n="reading_level_label">Reading level</label>
+        <div class="segmented" id="reading-level" role="group" aria-label="Reading level">
+          <button type="button" class="seg" data-level="A2" data-i18n="level_a2">Simplest</button>
+          <button type="button" class="seg active" data-level="B1" data-i18n="level_b1">Standard</button>
+          <button type="button" class="seg" data-level="B2" data-i18n="level_b2">Detailed</button>
+        </div>
+      </div>
+      <div class="control">
         <label for="response-language" class="control-label" data-i18n="language_label">Response language</label>
-        <select id="response-language" class="lang-select" aria-label="Language for the AI response">
-          <!-- Populated by JS from /api/v1/languages -->
-        </select>
+        <div class="select-wrap">
+          <select id="response-language" class="select" aria-label="Language for the AI response"></select>
+        </div>
       </div>
+    </div>
 
-      <div class="action-buttons">
-        <button id="btn-clear" class="btn btn-secondary" type="button" data-i18n="btn_clear">
-          Start over
-        </button>
-        <button id="btn-analyze" class="btn btn-primary" type="button" data-i18n="btn_analyze">
-          Simplify document
-        </button>
-      </div>
+    <div class="action-bar">
+      <button id="btn-clear" class="btn btn-ghost" type="button" data-i18n="btn_clear">Start over</button>
+      <button id="btn-analyze" class="btn btn-primary" type="button" data-i18n="btn_analyze">
+        <span class="btn-icon-inline" aria-hidden="true">✨</span>
+        <span data-i18n="btn_analyze">Simplify document</span>
+      </button>
     </div>
   </section>
 
-  <!-- ── Loading indicator ── -->
-  <div id="loading-indicator" class="loading-indicator hidden" role="status" aria-live="assertive">
+  <!-- ── Loading skeleton ──────────────────────────────────────────────── -->
+  <div id="loading-indicator" class="loading-card card hidden" role="status" aria-live="assertive">
     <div class="spinner" aria-hidden="true"></div>
     <p id="loading-text" data-i18n="loading_analyze">Simplifying your document…</p>
+    <div class="skeleton-lines" aria-hidden="true">
+      <span class="skeleton" style="width:40%"></span>
+      <span class="skeleton" style="width:90%"></span>
+      <span class="skeleton" style="width:80%"></span>
+      <span class="skeleton" style="width:60%"></span>
+    </div>
   </div>
 
-  <!-- ── Results card ── -->
+  <!-- ── Results ───────────────────────────────────────────────────────── -->
   <section id="results-section" class="card results-card hidden" aria-labelledby="results-heading" aria-live="polite">
     <div class="results-header">
       <h2 id="results-heading" class="card-title" data-i18n="result_heading">Your simplified explanation</h2>
       <div class="results-actions">
-        <button id="btn-listen" class="btn btn-icon" type="button" aria-label="Listen to the explanation" data-i18n="btn_listen">
+        <button id="btn-listen" class="btn btn-soft btn-sm" type="button" aria-label="Listen to the explanation">
           <span aria-hidden="true">🔊</span> <span class="btn-label" data-i18n="btn_listen">Listen</span>
         </button>
-        <button id="btn-print" class="btn btn-icon" type="button" aria-label="Print this explanation" onclick="window.print()">
+        <button id="btn-print" class="btn btn-soft btn-sm" type="button" aria-label="Print this explanation" onclick="window.print()">
           <span aria-hidden="true">🖨️</span> <span class="btn-label" data-i18n="btn_print">Print</span>
         </button>
       </div>
     </div>
 
-    <!-- Provider/model badge -->
     <div id="provider-badge" class="provider-badge" aria-label="AI provider information"></div>
 
-    <!-- AI audio player (hidden until generated) -->
     <div id="audio-container" class="audio-container hidden">
       <audio id="audio-player" controls aria-label="Audio explanation"></audio>
     </div>
 
-    <!-- Analysis content -->
-    <div id="analysis-content" class="analysis-content prose"></div>
+    <div id="analysis-content" class="analysis-content"></div>
   </section>
 
-  <!-- ── Chat card ── -->
+  <!-- ── Chat ──────────────────────────────────────────────────────────── -->
   <section id="chat-section" class="card chat-card hidden" aria-labelledby="chat-heading">
     <h2 id="chat-heading" class="card-title" data-i18n="chat_heading">Ask a follow-up question</h2>
-
-    <!-- Chat messages -->
-    <div id="chat-messages" class="chat-messages" role="log" aria-live="polite" aria-label="Conversation">
-      <!-- Messages inserted here by JS -->
-    </div>
-
-    <!-- Chat input -->
+    <div id="chat-messages" class="chat-messages" role="log" aria-live="polite" aria-label="Conversation"></div>
     <form id="chat-form" class="chat-form" aria-label="Ask a question">
       <label for="chat-input" class="visually-hidden" data-i18n="chat_heading">Ask a follow-up question</label>
-      <textarea
-        id="chat-input"
-        class="chat-input"
-        rows="2"
-        data-i18n-placeholder="chat_placeholder"
-        placeholder="Type your question here, e.g. 'Should I be worried about this?'"
-        aria-required="true"
-      ></textarea>
+      <textarea id="chat-input" class="chat-input" rows="1" data-i18n-placeholder="chat_placeholder"
+        placeholder="Type your question here…" aria-required="true"></textarea>
       <button id="btn-chat-send" class="btn btn-primary btn-send" type="submit" aria-label="Send message">
-        <span aria-hidden="true">↑</span>
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 2 11 13" /><path d="M22 2 15 22l-4-9-9-4 20-7z" /></svg>
       </button>
     </form>
   </section>
 
-  <!-- ── Error banner ── -->
   <div id="error-banner" class="error-banner hidden" role="alert" aria-live="assertive">
     <span id="error-message"></span>
     <button class="error-close" onclick="document.getElementById('error-banner').classList.add('hidden')" aria-label="Close error">✕</button>
@@ -201,9 +164,6 @@
 
 </main>
 
-<!-- ═══════════════════════════════════════════════════════════════════════ -->
-<!--  FOOTER                                                                -->
-<!-- ═══════════════════════════════════════════════════════════════════════ -->
 <footer class="site-footer" role="contentinfo">
   <div class="container footer-inner">
     <p class="footer-disclaimer" data-i18n="footer_disclaimer">
@@ -212,22 +172,19 @@
     </p>
     <p class="footer-links">
       <a href="/api/docs" target="_blank" rel="noopener noreferrer">API Docs</a>
-      &middot;
+      <span class="dot">·</span>
       <a href="https://github.com/Thijsn04/MediClear-AI" target="_blank" rel="noopener noreferrer">GitHub</a>
-      &middot;
-      <span>MediClear AI v2.0</span>
+      <span class="dot">·</span>
+      <span>MediClear AI v3</span>
     </p>
   </div>
 </footer>
 
-<!-- ═══════════════════════════════════════════════════════════════════════ -->
-<!--  Print styles overlay (shown during print)                             -->
-<!-- ═══════════════════════════════════════════════════════════════════════ -->
 <div id="print-header" class="print-only">
   <h1>MediClear AI — Medical Explanation</h1>
   <p class="print-disclaimer">
-    This document was generated by MediClear AI for educational purposes only.
-    It does not replace professional medical advice. Always consult your healthcare provider.
+    Generated by MediClear AI for educational purposes only. It does not replace
+    professional medical advice. Always consult your healthcare provider.
   </p>
   <hr />
 </div>

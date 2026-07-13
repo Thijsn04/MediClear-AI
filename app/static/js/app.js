@@ -3,8 +3,8 @@
  *
  * Vanilla JS, no build step, no external CDNs. The API returns a *structured*
  * analysis object, which we render directly into the DOM with textContent —
- * so there is no markdown parser and no innerHTML of model output, closing the
- * XSS vector entirely. Chat answers stream over Server-Sent Events.
+ * no markdown parser and no innerHTML of model output, so there is no XSS
+ * surface. Chat answers stream over Server-Sent Events. Light/dark themes.
  */
 
 /* ── State ────────────────────────────────────────────────────────────────── */
@@ -12,18 +12,19 @@ const state = {
   sessionId: null,
   currentLanguage: 'en',
   uiLanguage: 'en',
+  readingLevel: 'B1',
   translations: {},
   languages: [],
   languagesByCode: {},
-  analysisText: '',   // markdown convenience string, used for TTS
+  analysisText: '',
   selectedFile: null,
   audioBlob: null,
 };
 
-/* ── DOM refs ─────────────────────────────────────────────────────────────── */
 const $ = id => document.getElementById(id);
 const el = {
   uiLangSelect: $('ui-language-select'),
+  themeToggle: $('theme-toggle'),
   tabText: $('tab-text'),
   tabFile: $('tab-file'),
   panelText: $('panel-text'),
@@ -32,6 +33,7 @@ const el = {
   dropZone: $('drop-zone'),
   fileInput: $('file-input'),
   filePreview: $('file-preview'),
+  readingLevel: $('reading-level'),
   responseLang: $('response-language'),
   btnAnalyze: $('btn-analyze'),
   btnClear: $('btn-clear'),
@@ -50,6 +52,21 @@ const el = {
   errorBanner: $('error-banner'),
   errorMessage: $('error-message'),
 };
+
+/* ── Theme ────────────────────────────────────────────────────────────────── */
+function initTheme() {
+  const saved = localStorage.getItem('mediclear-theme');
+  if (saved === 'light' || saved === 'dark') {
+    document.documentElement.setAttribute('data-theme', saved);
+  }
+  el.themeToggle.addEventListener('click', () => {
+    const isDark = matchMedia('(prefers-color-scheme: dark)').matches;
+    const current = document.documentElement.getAttribute('data-theme') || (isDark ? 'dark' : 'light');
+    const next = current === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    localStorage.setItem('mediclear-theme', next);
+  });
+}
 
 /* ── i18n ─────────────────────────────────────────────────────────────────── */
 function t(key) {
@@ -83,10 +100,7 @@ async function apiFetch(path, options = {}) {
   const resp = await fetch(path, options);
   if (!resp.ok) {
     let detail = `HTTP ${resp.status}`;
-    try {
-      const body = await resp.json();
-      detail = body.error || body.detail || detail;
-    } catch (_) { /* ignore */ }
+    try { const b = await resp.json(); detail = b.error || b.detail || detail; } catch (_) {}
     throw new Error(detail);
   }
   return resp;
@@ -94,6 +108,7 @@ async function apiFetch(path, options = {}) {
 
 /* ── Init ─────────────────────────────────────────────────────────────────── */
 async function init() {
+  initTheme();
   try {
     const [transResp, langResp] = await Promise.all([
       apiFetch('/api/v1/translations'),
@@ -124,39 +139,44 @@ async function init() {
 
 /* ── Events ───────────────────────────────────────────────────────────────── */
 function bindEvents() {
-  el.uiLangSelect.addEventListener('change', () => {
-    state.uiLanguage = el.uiLangSelect.value;
-    applyTranslations();
+  el.uiLangSelect.addEventListener('change', () => { state.uiLanguage = el.uiLangSelect.value; applyTranslations(); });
+  el.responseLang.addEventListener('change', () => { state.currentLanguage = el.responseLang.value; });
+
+  el.readingLevel.querySelectorAll('.seg').forEach(seg => {
+    seg.addEventListener('click', () => {
+      el.readingLevel.querySelectorAll('.seg').forEach(s => s.classList.remove('active'));
+      seg.classList.add('active');
+      state.readingLevel = seg.dataset.level;
+    });
   });
-  el.responseLang.addEventListener('change', () => {
-    state.currentLanguage = el.responseLang.value;
-  });
+
   el.tabText.addEventListener('click', () => switchTab('text'));
   el.tabFile.addEventListener('click', () => switchTab('file'));
 
   el.dropZone.addEventListener('click', () => el.fileInput.click());
-  el.dropZone.addEventListener('keydown', e => {
-    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); el.fileInput.click(); }
-  });
+  el.dropZone.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); el.fileInput.click(); } });
   el.dropZone.addEventListener('dragover', e => { e.preventDefault(); el.dropZone.classList.add('drag-over'); });
   el.dropZone.addEventListener('dragleave', () => el.dropZone.classList.remove('drag-over'));
   el.dropZone.addEventListener('drop', e => {
-    e.preventDefault();
-    el.dropZone.classList.remove('drag-over');
+    e.preventDefault(); el.dropZone.classList.remove('drag-over');
     const file = e.dataTransfer.files[0];
     if (file) handleFileSelected(file);
   });
-  el.fileInput.addEventListener('change', () => {
-    if (el.fileInput.files[0]) handleFileSelected(el.fileInput.files[0]);
-  });
+  el.fileInput.addEventListener('change', () => { if (el.fileInput.files[0]) handleFileSelected(el.fileInput.files[0]); });
 
   el.btnAnalyze.addEventListener('click', handleAnalyze);
   el.btnClear.addEventListener('click', resetAll);
   el.btnListen.addEventListener('click', handleListen);
   el.chatForm.addEventListener('submit', e => { e.preventDefault(); handleChat(); });
+  el.chatInput.addEventListener('input', autoGrow);
   el.chatInput.addEventListener('keydown', e => {
-    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); handleChat(); }
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleChat(); }
   });
+}
+
+function autoGrow() {
+  el.chatInput.style.height = 'auto';
+  el.chatInput.style.height = Math.min(el.chatInput.scrollHeight, 160) + 'px';
 }
 
 /* ── Tabs & files ─────────────────────────────────────────────────────────── */
@@ -178,15 +198,19 @@ function handleFileSelected(file) {
   state.selectedFile = { file, type: isImage ? 'image' : 'pdf' };
   el.filePreview.classList.remove('hidden');
   el.filePreview.textContent = '';
-
-  const label = document.createElement('span');
-  label.textContent = `${isImage ? '📷' : '📄'} ${file.name} (${formatBytes(file.size)})`;
   if (isImage) {
     const img = document.createElement('img');
     img.src = URL.createObjectURL(file);
     img.alt = `Preview of ${file.name}`;
     el.filePreview.appendChild(img);
+  } else {
+    const icon = document.createElement('span');
+    icon.textContent = '📄';
+    icon.style.fontSize = '1.6rem';
+    el.filePreview.appendChild(icon);
   }
+  const label = document.createElement('span');
+  label.textContent = `${file.name} · ${formatBytes(file.size)}`;
   el.filePreview.appendChild(label);
 }
 
@@ -203,12 +227,12 @@ async function handleAnalyze() {
   try {
     const formData = new FormData();
     formData.append('language', state.currentLanguage);
+    formData.append('reading_level', state.readingLevel);
     if (activeTab === 'text') formData.append('text', textValue);
     else formData.append('file', state.selectedFile.file);
 
     const resp = await apiFetch('/api/v1/analyze', { method: 'POST', body: formData });
     const data = await resp.json();
-
     state.sessionId = data.session_id;
     state.analysisText = data.markdown;
     state.audioBlob = null;
@@ -223,11 +247,9 @@ async function handleAnalyze() {
 /* ── Structured, XSS-safe rendering ───────────────────────────────────────── */
 function showResults(data) {
   el.providerBadge.textContent =
-    `🤖 ${data.provider} · ${data.model} · ${data.language.toUpperCase()}${data.cached ? ' · cached' : ''}`;
+    `${data.provider} · ${data.model} · ${data.language.toUpperCase()}${data.cached ? ' · cached' : ''}`;
   el.providerBadge.classList.remove('hidden');
-
   renderAnalysis(el.analysisContent, data.analysis, data.language);
-
   el.audioContainer.classList.add('hidden');
   el.chatMessages.textContent = '';
   el.resultsSection.classList.remove('hidden');
@@ -235,106 +257,146 @@ function showResults(data) {
   el.resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
-function renderAnalysis(container, analysis, language) {
+const h = (level, text) => { const n = document.createElement('h' + level); n.textContent = text; return n; };
+const p = text => { const n = document.createElement('p'); n.textContent = text; return n; };
+
+function renderAnalysis(container, a, language) {
   container.textContent = '';
   container.setAttribute('dir', isRtl(language) ? 'rtl' : 'ltr');
 
-  const h = (level, text) => { const n = document.createElement('h' + level); n.textContent = text; return n; };
-  const p = text => { const n = document.createElement('p'); n.textContent = text; return n; };
-
-  if (analysis.document_type === 'not_medical') {
+  if (a.document_type === 'not_medical') {
     container.appendChild(h(3, t('not_medical') || 'This does not look like a medical document'));
-    container.appendChild(p(analysis.summary || analysis.explanation || ''));
+    container.appendChild(p(a.summary || a.explanation || ''));
     return;
   }
 
-  if (analysis.readability && analysis.readability.estimated_cefr) {
+  if (a.readability && a.readability.estimated_cefr) {
+    const meets = a.readability.meets_target;
     const badge = document.createElement('div');
-    badge.className = 'readability-badge';
-    const meets = analysis.readability.meets_target;
-    badge.textContent = `📖 ${t('reading_level') || 'Reading level'}: ${analysis.readability.estimated_cefr}` +
-      (meets === false ? ' ⚠︎' : ' ✓');
+    badge.className = 'readability-badge' + (meets === false ? ' miss' : '');
+    const dot = document.createElement('span'); dot.className = 'dotmark'; badge.appendChild(dot);
+    const label = document.createElement('span');
+    label.textContent = `${t('reading_level') || 'Reading level'}: ${a.readability.estimated_cefr}`;
+    badge.appendChild(label);
     container.appendChild(badge);
   }
 
-  if (analysis.summary) { container.appendChild(h(2, t('sec_summary') || 'Summary')); container.appendChild(p(analysis.summary)); }
-  if (analysis.explanation) {
+  if (a.summary) { container.appendChild(h(2, t('sec_summary') || 'Summary')); container.appendChild(p(a.summary)); }
+  if (a.explanation) {
     container.appendChild(h(2, t('sec_explanation') || 'Explanation'));
-    analysis.explanation.split(/\n{2,}/).forEach(par => { if (par.trim()) container.appendChild(p(par.trim())); });
+    a.explanation.split(/\n{2,}/).forEach(par => { if (par.trim()) container.appendChild(p(par.trim())); });
   }
 
-  if (analysis.lab_values && analysis.lab_values.length) {
+  if (a.lab_values && a.lab_values.length) {
     container.appendChild(h(2, t('sec_labs') || 'Lab Values'));
-    container.appendChild(buildTable(
-      ['Test', 'Result', 'Reference', 'Flag'],
-      analysis.lab_values.map(lv => [lv.name, `${lv.value}${lv.unit ? ' ' + lv.unit : ''}`, lv.reference_range || '—', lv.flag || '—'])
-    ));
+    container.appendChild(buildLabTable(a.lab_values));
   }
 
-  if (analysis.medications && analysis.medications.length) {
+  if (a.medications && a.medications.length) {
     container.appendChild(h(2, t('sec_meds') || 'Medications'));
-    container.appendChild(buildList(analysis.medications.map(m =>
-      `${m.name}${m.dose ? ' — ' + m.dose : ''}${m.frequency ? ', ' + m.frequency : ''}${m.purpose ? ' (' + m.purpose + ')' : ''}`)));
+    container.appendChild(buildMedications(a.medications));
   }
 
-  if (analysis.key_terms && analysis.key_terms.length) {
+  if (a.key_terms && a.key_terms.length) {
     container.appendChild(h(2, t('sec_terms') || 'Key Medical Terms'));
+    container.appendChild(buildTerms(a.key_terms));
+  }
+
+  if (a.action_items && a.action_items.length) {
+    container.appendChild(h(2, t('sec_actions') || 'What This Means for You'));
     const ul = document.createElement('ul');
-    analysis.key_terms.forEach(kt => {
-      const li = document.createElement('li');
-      const strong = document.createElement('strong');
-      strong.textContent = kt.term + ' ';
-      li.appendChild(strong);
-      li.appendChild(document.createTextNode('— ' + kt.definition));
-      if (kt.found_in_source === false) {
-        const note = document.createElement('em');
-        note.className = 'term-note';
-        note.textContent = ' (not found verbatim in your document)';
-        li.appendChild(note);
-      }
-      ul.appendChild(li);
-    });
+    a.action_items.forEach(item => { const li = document.createElement('li'); li.textContent = item; ul.appendChild(li); });
     container.appendChild(ul);
   }
 
-  if (analysis.action_items && analysis.action_items.length) {
-    container.appendChild(h(2, t('sec_actions') || 'What This Means for You'));
-    container.appendChild(buildList(analysis.action_items));
-  }
-
-  if (analysis.disclaimer) {
-    const hr = document.createElement('hr');
-    const disc = document.createElement('p');
-    disc.className = 'analysis-disclaimer';
-    disc.textContent = analysis.disclaimer;
-    container.appendChild(hr);
+  if (a.disclaimer) {
+    container.appendChild(document.createElement('hr'));
+    const disc = document.createElement('p'); disc.className = 'analysis-disclaimer'; disc.textContent = a.disclaimer;
     container.appendChild(disc);
   }
 }
 
-function buildList(items) {
+function buildTerms(terms) {
   const ul = document.createElement('ul');
-  items.forEach(text => { const li = document.createElement('li'); li.textContent = text; ul.appendChild(li); });
+  ul.className = 'term-list';
+  terms.forEach(kt => {
+    const li = document.createElement('li');
+    const item = document.createElement('div');
+    item.className = 'term-item';
+    const name = document.createElement('span');
+    name.className = 'term-name';
+    name.textContent = kt.term;
+    item.appendChild(name);
+
+    if (kt.source && kt.source !== 'model') {
+      const chip = document.createElement('span');
+      chip.className = 'source-chip ' + kt.source;
+      if (kt.source_url) {
+        const link = document.createElement('a');
+        link.href = kt.source_url; link.target = '_blank'; link.rel = 'noopener noreferrer';
+        link.textContent = kt.source === 'online' ? 'MedlinePlus ↗' : 'glossary';
+        chip.appendChild(link);
+      } else {
+        chip.textContent = kt.source === 'glossary' ? 'glossary' : kt.source;
+      }
+      item.appendChild(chip);
+    }
+    if (kt.found_in_source === false) {
+      const note = document.createElement('span');
+      note.className = 'term-note';
+      note.textContent = t('term_not_in_source') || '(not found verbatim in your document)';
+      item.appendChild(note);
+    }
+    item.appendChild(document.createTextNode(' — ' + kt.definition));
+    li.appendChild(item);
+    ul.appendChild(li);
+  });
   return ul;
 }
 
-function buildTable(headers, rows) {
+function buildMedications(meds) {
+  const ul = document.createElement('ul');
+  ul.className = 'med-list';
+  meds.forEach(m => {
+    const li = document.createElement('li');
+    const card = document.createElement('div');
+    card.className = 'med-card';
+    const name = document.createElement('div'); name.className = 'med-name'; name.textContent = m.name;
+    card.appendChild(name);
+    const bits = [m.dose, m.frequency].filter(Boolean).join(' · ');
+    if (bits) { const meta = document.createElement('div'); meta.className = 'med-meta'; meta.textContent = bits; card.appendChild(meta); }
+    if (m.purpose) { const pu = document.createElement('div'); pu.className = 'med-meta'; pu.textContent = m.purpose; card.appendChild(pu); }
+    li.appendChild(card);
+    ul.appendChild(li);
+  });
+  return ul;
+}
+
+function buildLabTable(labs) {
   const wrap = document.createElement('div');
   wrap.className = 'table-wrap';
   const table = document.createElement('table');
   const thead = document.createElement('thead');
   const htr = document.createElement('tr');
-  headers.forEach(hdr => { const th = document.createElement('th'); th.textContent = hdr; htr.appendChild(th); });
+  [t('lab_test') || 'Test', t('lab_result') || 'Result', t('lab_ref') || 'Reference', t('lab_flag') || 'Flag']
+    .forEach(hdr => { const th = document.createElement('th'); th.textContent = hdr; htr.appendChild(th); });
   thead.appendChild(htr);
   const tbody = document.createElement('tbody');
-  rows.forEach(row => {
+  labs.forEach(lv => {
     const tr = document.createElement('tr');
-    row.forEach(cell => { const td = document.createElement('td'); td.textContent = cell; tr.appendChild(td); });
+    const cells = [
+      lv.name,
+      `${lv.value}${lv.unit ? ' ' + lv.unit : ''}`,
+      lv.reference_range || '—',
+    ];
+    cells.forEach(c => { const td = document.createElement('td'); td.textContent = c; tr.appendChild(td); });
+    const flagTd = document.createElement('td');
+    if (lv.flag) { flagTd.textContent = lv.flag; flagTd.className = 'flag-' + lv.flag.toLowerCase(); }
+    else flagTd.textContent = '—';
+    tr.appendChild(flagTd);
     tbody.appendChild(tr);
   });
-  table.appendChild(thead);
-  table.appendChild(tbody);
-  wrap.appendChild(table);
+  table.appendChild(thead); table.appendChild(tbody); wrap.appendChild(table);
   return wrap;
 }
 
@@ -353,7 +415,7 @@ async function handleListen() {
     const resp = await apiFetch('/api/v1/audio', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text: state.analysisText, language: state.currentLanguage }),
+      body: JSON.stringify({ text: state.analysisText.slice(0, 9000), language: state.currentLanguage }),
     });
     state.audioBlob = await resp.blob();
     playAudio(state.audioBlob);
@@ -378,12 +440,17 @@ async function handleChat() {
 
   appendChatMessage('user', message, t('chat_you') || 'You');
   el.chatInput.value = '';
+  autoGrow();
   el.chatInput.disabled = true;
   const btnSend = $('btn-chat-send');
   btnSend.disabled = true;
 
   const bubble = appendChatMessage('assistant', '', t('chat_assistant') || 'MediClear AI');
   bubble.setAttribute('dir', isRtl(state.currentLanguage) ? 'rtl' : 'ltr');
+  const typing = document.createElement('span');
+  typing.className = 'typing-dots';
+  typing.innerHTML = '<span></span><span></span><span></span>';
+  bubble.appendChild(typing);
 
   try {
     const resp = await fetch(`/api/v1/chat/${state.sessionId}/stream`, {
@@ -392,10 +459,16 @@ async function handleChat() {
       body: JSON.stringify({ message, language: state.currentLanguage }),
     });
     if (!resp.ok || !resp.body) throw new Error(`HTTP ${resp.status}`);
+    let first = true;
     await consumeSSE(resp.body, evt => {
-      if (evt.delta) { bubble.textContent += evt.delta; el.chatMessages.scrollTop = el.chatMessages.scrollHeight; }
+      if (evt.delta) {
+        if (first) { bubble.textContent = ''; first = false; }
+        bubble.textContent += evt.delta;
+        el.chatMessages.scrollTop = el.chatMessages.scrollHeight;
+      }
       if (evt.error) throw new Error(evt.error);
     });
+    if (first) bubble.textContent = '';
   } catch (err) {
     bubble.textContent = (err.message || t('err_generic'));
     showError(err.message || t('err_generic'));
@@ -419,7 +492,7 @@ async function consumeSSE(stream, onEvent) {
     for (const chunk of events) {
       const line = chunk.split('\n').find(l => l.startsWith('data:'));
       if (!line) continue;
-      try { onEvent(JSON.parse(line.slice(5).trim())); } catch (_) { /* ignore */ }
+      try { onEvent(JSON.parse(line.slice(5).trim())); } catch (_) {}
     }
   }
 }
@@ -442,10 +515,7 @@ function appendChatMessage(role, content, label) {
 
 /* ── Reset / loading / errors ─────────────────────────────────────────────── */
 function resetAll() {
-  state.sessionId = null;
-  state.analysisText = '';
-  state.selectedFile = null;
-  state.audioBlob = null;
+  state.sessionId = null; state.analysisText = ''; state.selectedFile = null; state.audioBlob = null;
   el.textInput.value = '';
   el.fileInput.value = '';
   el.filePreview.classList.add('hidden');
@@ -465,14 +535,8 @@ function setLoading(active, message) {
   if (message) el.loadingText.textContent = message;
 }
 
-function showError(message) {
-  el.errorMessage.textContent = message;
-  el.errorBanner.classList.remove('hidden');
-}
-function hideError() {
-  el.errorBanner.classList.add('hidden');
-  el.errorMessage.textContent = '';
-}
+function showError(message) { el.errorMessage.textContent = message; el.errorBanner.classList.remove('hidden'); }
+function hideError() { el.errorBanner.classList.add('hidden'); el.errorMessage.textContent = ''; }
 
 function formatBytes(bytes) {
   if (bytes < 1024) return bytes + ' B';
