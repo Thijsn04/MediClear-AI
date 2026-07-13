@@ -1,4 +1,4 @@
-"""Chat endpoints — follow-up questions, with optional SSE streaming."""
+"""Chat endpoints - follow-up questions, with optional SSE streaming."""
 
 from __future__ import annotations
 
@@ -69,7 +69,7 @@ async def chat_stream(
             ):
                 yield f"data: {json.dumps({'delta': delta})}\n\n"
             yield f"data: {json.dumps({'done': True})}\n\n"
-        except Exception as exc:  # noqa: BLE001 — surface errors within the stream
+        except Exception as exc:  # noqa: BLE001 - surface errors within the stream
             yield f"data: {json.dumps({'error': str(exc)})}\n\n"
 
     logger.info("audit.chat_stream", identity=identity, session_id=session_id)

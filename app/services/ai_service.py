@@ -1,5 +1,5 @@
 """
-AI service — orchestration.
+AI service - orchestration.
 
 The single point of contact between the API layer and everything below it.
 It owns the end-to-end analysis pipeline:

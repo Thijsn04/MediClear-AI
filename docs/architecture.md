@@ -35,8 +35,8 @@ AI API
 ## Key design decisions
 
 **Thin providers.** A provider implements just `_complete` (and optionally
-`_stream`). All domain logic — prompt construction, JSON parsing into
-`StructuredAnalysis`, faithfulness grounding, readability — lives once in
+`_stream`). All domain logic - prompt construction, JSON parsing into
+`StructuredAnalysis`, faithfulness grounding, readability - lives once in
 `BaseAIProvider`. Adding a provider is ~40 lines.
 
 **Structured output.** The provider asks the model for JSON matching the
@@ -46,7 +46,7 @@ display markdown. A prose fallback keeps things working if a model ignores the
 JSON instruction.
 
 **Resilience by composition.** `ResilientProvider` wraps a list of providers and
-adds timeout, retries, and failover around the two primitives — so the whole
+adds timeout, retries, and failover around the two primitives - so the whole
 pipeline inherits resilience without touching provider code.
 
 **Pluggable state.** `SessionStore`, the cache backend, and the rate limiter

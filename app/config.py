@@ -1,5 +1,5 @@
 """
-Application configuration — driven entirely by environment variables.
+Application configuration - driven entirely by environment variables.
 
 Every subsystem (AI providers, auth, rate limiting, sessions, caching,
 privacy, TTS, observability) is configured here. Nothing is hardcoded in
@@ -8,9 +8,9 @@ matching key and freely choose any model string that backend accepts.
 
 The two headline deployment targets are supported by configuration alone:
 
-* **Cloud API-first** — set provider to a hosted model, enable API-key auth
+* **Cloud API-first** - set provider to a hosted model, enable API-key auth
   and rate limiting, optionally point ``REDIS_URL`` at a shared store.
-* **On-prem / air-gapped** — set the provider to a local OpenAI-compatible
+* **On-prem / air-gapped** - set the provider to a local OpenAI-compatible
   server (Ollama, vLLM, LM Studio), use the local TTS backend, and enable
   ``ZERO_RETENTION`` so no document content is ever persisted.
 """
@@ -38,7 +38,7 @@ class Settings(BaseSettings):
     app_name: str = "MediClear AI"
     app_version: str = __version__
     app_description: str = (
-        "State-of-the-art medical document simplification — cloud or on-prem, "
+        "State-of-the-art medical document simplification - cloud or on-prem, "
         "API-first, provider-agnostic."
     )
     environment: Literal["development", "staging", "production"] = Field(
@@ -122,7 +122,7 @@ class Settings(BaseSettings):
     # Redact detected PII/PHI patterns from logs (document content is never
     # logged regardless; this covers metadata like filenames).
     redact_logs: bool = Field(default=True, alias="REDACT_LOGS")
-    # Emit an audit event for every analysis/chat (who, when, sizes — never
+    # Emit an audit event for every analysis/chat (who, when, sizes - never
     # content). Written through the structured logger under the "audit" channel.
     audit_logging: bool = Field(default=True, alias="AUDIT_LOGGING")
 
@@ -171,7 +171,7 @@ class Settings(BaseSettings):
         if isinstance(v, str):
             stripped = v.strip()
             if not stripped or stripped.startswith("["):
-                return v  # empty or JSON list — let pydantic handle it
+                return v  # empty or JSON list - let pydantic handle it
             return [item.strip() for item in stripped.split(",") if item.strip()]
         return v
 

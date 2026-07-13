@@ -15,4 +15,4 @@ What you'd like to see happen.
 Any alternative approaches you've thought about.
 
 **Additional context**
-Anything else — links, mock-ups, related standards (e.g. FHIR, CEFR).
+Anything else - links, mock-ups, related standards (e.g. FHIR, CEFR).

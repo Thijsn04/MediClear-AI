@@ -3,12 +3,12 @@ Chat session storage.
 
 An abstract, async interface with two implementations:
 
-* :class:`InMemorySessionStore` — TTL + LRU eviction, single-instance.
-* :class:`RedisSessionStore`   — durable, multi-instance, TTL via Redis.
+* :class:`InMemorySessionStore` - TTL + LRU eviction, single-instance.
+* :class:`RedisSessionStore`   - durable, multi-instance, TTL via Redis.
 
 Unlike the previous version, a session stores the **document context** used to
 ground follow-up answers (the source text or, for images, the rendered
-analysis) — not merely the AI's own summary — so chat can be faithful to the
+analysis) - not merely the AI's own summary - so chat can be faithful to the
 original document.
 """
 

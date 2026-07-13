@@ -1,5 +1,5 @@
 """
-Rate limiting — fixed-window counters keyed by caller identity.
+Rate limiting - fixed-window counters keyed by caller identity.
 
 Uses Redis (atomic INCR + EXPIRE) when configured so limits hold across
 instances; otherwise an in-process counter. Simple, predictable, and good
@@ -58,7 +58,7 @@ class RedisRateLimiter(RateLimiter):
                 ttl = await self._redis.ttl(key)
                 return False, max(1, int(ttl))
             return True, 0
-        except Exception as exc:  # noqa: BLE001 — fail open, never block on limiter errors
+        except Exception as exc:  # noqa: BLE001 - fail open, never block on limiter errors
             logger.warning("ratelimit.backend_error", error=str(exc))
             return True, 0
 

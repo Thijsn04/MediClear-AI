@@ -1,4 +1,4 @@
-"""Languages endpoint — returns all supported languages with metadata."""
+"""Languages endpoint - returns all supported languages with metadata."""
 
 from __future__ import annotations
 

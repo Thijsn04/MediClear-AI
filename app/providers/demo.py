@@ -50,7 +50,7 @@ _DEMO_ANALYSIS = {
             "name": "White blood cells",
             "value": "6.5",
             "unit": "10^9/L",
-            "reference_range": "4.0–11.0",
+            "reference_range": "4.0-11.0",
             "flag": "normal",
         },
         {
@@ -115,7 +115,7 @@ class DemoProvider(BaseAIProvider):
             text=(
                 "That's a good question. Based on your discharge summary, the "
                 "most important thing is to finish your antibiotics and rest. "
-                "This is general information, not medical advice — please check "
+                "This is general information, not medical advice - please check "
                 "with your doctor about your specific situation."
             ),
             input_tokens=0,
@@ -128,7 +128,7 @@ class DemoProvider(BaseAIProvider):
         answer = (
             "That's a good question. Based on your discharge summary, the most "
             "important thing is to finish your antibiotics and rest. This is "
-            "general information, not medical advice — please check with your "
+            "general information, not medical advice - please check with your "
             "doctor about your specific situation."
         )
         for word in answer.split():

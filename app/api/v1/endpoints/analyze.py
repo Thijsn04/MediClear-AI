@@ -1,4 +1,4 @@
-"""Document analysis endpoint — plain text or file upload → structured result."""
+"""Document analysis endpoint - plain text or file upload → structured result."""
 
 from __future__ import annotations
 
@@ -39,7 +39,7 @@ def _validate_language(language: str) -> str:
     description=(
         "Submit a medical document as plain text **or** an uploaded file (PDF, "
         "JPEG, PNG, WEBP). Returns a **structured** analysis (summary, "
-        "explanation, key terms, action items, and — when present — lab values "
+        "explanation, key terms, action items, and - when present - lab values "
         "and medications) plus a rendered markdown view and a readability "
         "assessment. The `session_id` powers `/chat/{session_id}` follow-ups."
     ),

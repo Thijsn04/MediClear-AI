@@ -1,9 +1,9 @@
 """
 Text-to-speech with pluggable backends.
 
-* ``gtts``     — Google Text-to-Speech (cloud; requires internet).
-* ``local``    — offline synthesis via pyttsx3/espeak (for air-gapped use).
-* ``disabled`` — audio endpoint returns 404.
+* ``gtts``     - Google Text-to-Speech (cloud; requires internet).
+* ``local``    - offline synthesis via pyttsx3/espeak (for air-gapped use).
+* ``disabled`` - audio endpoint returns 404.
 
 Selected by the ``TTS_BACKEND`` setting so the same code serves both the cloud
 and on-prem deployment targets.

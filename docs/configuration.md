@@ -9,7 +9,7 @@ sensible for local development; harden them for production. See
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `AI_PROVIDER` | `gemini` | `gemini` \| `openai` \| `anthropic` |
-| `AI_FALLBACK_PROVIDERS` | — | Ordered failover chain, e.g. `openai,anthropic` |
+| `AI_FALLBACK_PROVIDERS` | - | Ordered failover chain, e.g. `openai,anthropic` |
 | `AI_REQUEST_TIMEOUT_SECONDS` | `60` | Per-call timeout |
 | `AI_MAX_RETRIES` | `2` | Retries with exponential backoff before failover |
 | `AI_MAX_OUTPUT_TOKENS` | `4096` | Max generated tokens |
@@ -17,7 +17,7 @@ sensible for local development; harden them for production. See
 
 Provider keys/models: `GOOGLE_API_KEY`/`GEMINI_MODEL`,
 `OPENAI_API_KEY`/`OPENAI_MODEL`/`OPENAI_BASE_URL`,
-`ANTHROPIC_API_KEY`/`ANTHROPIC_MODEL`. **Model names are free strings** — use any
+`ANTHROPIC_API_KEY`/`ANTHROPIC_MODEL`. **Model names are free strings** - use any
 model your key or server accepts.
 
 ### OpenAI-compatible servers
@@ -45,7 +45,7 @@ Set `AI_PROVIDER=openai` and `OPENAI_BASE_URL`:
 |----------|---------|-------------|
 | `SESSION_TTL_SECONDS` | `3600` | Chat session lifetime |
 | `MAX_SESSIONS` | `1000` | In-memory session cap |
-| `REDIS_URL` | — | Durable, multi-instance store (sessions, cache, rate limit) |
+| `REDIS_URL` | - | Durable, multi-instance store (sessions, cache, rate limit) |
 | `CACHE_ENABLED` | `true` | Reuse results for identical requests |
 | `CACHE_TTL_SECONDS` | `86400` | Cached result lifetime |
 
@@ -56,7 +56,7 @@ Set `AI_PROVIDER=openai` and `OPENAI_BASE_URL`:
 | `ZERO_RETENTION` | `false` | Persist nothing derived from the document (disables chat) |
 | `AUDIT_LOGGING` | `true` | Emit audit events (metadata only, never content) |
 | `REQUIRE_API_KEY` | `false` | Require `X-API-Key` / `Bearer` on mutations |
-| `API_KEYS` | — | Comma-separated keys |
+| `API_KEYS` | - | Comma-separated keys |
 | `RATE_LIMIT_ENABLED` | `true` | Fixed-window per-identity limiting |
 | `RATE_LIMIT_REQUESTS` / `RATE_LIMIT_WINDOW_SECONDS` | `60` / `60` | Limit + window |
 | `ALLOWED_ORIGINS` | `["*"]` | CORS origins; credentials auto-off while wildcard |

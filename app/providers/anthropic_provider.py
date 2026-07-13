@@ -17,7 +17,7 @@ logger = get_logger(__name__)
 
 
 class AnthropicProvider(BaseAIProvider):
-    """Anthropic Claude provider — text and vision."""
+    """Anthropic Claude provider - text and vision."""
 
     def __init__(self, api_key: str, model: str) -> None:
         self._api_key = api_key

@@ -4,8 +4,8 @@ Terminology grounding.
 Backs key-term definitions with a curated source so they are not simply invented
 by the model:
 
-* :class:`GlossaryLookup` — a bundled, offline glossary (English). Always on.
-* :class:`MedlinePlusLookup` — an opt-in online lookup against the U.S. National
+* :class:`GlossaryLookup` - a bundled, offline glossary (English). Always on.
+* :class:`MedlinePlusLookup` - an opt-in online lookup against the U.S. National
   Library of Medicine's MedlinePlus web service (English/Spanish), used only
   when ``TERMINOLOGY_ONLINE`` is enabled and internet egress is allowed.
 
@@ -107,7 +107,7 @@ class MedlinePlusLookup(TermLookup):
                 )
                 resp.raise_for_status()
                 return self._parse(resp.text, term, language)
-        except Exception as exc:  # noqa: BLE001 — online lookup is best-effort
+        except Exception as exc:  # noqa: BLE001 - online lookup is best-effort
             logger.info("terminology.online_failed", term=term, error=str(exc))
             return None
 

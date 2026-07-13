@@ -1,5 +1,5 @@
 # ════════════════════════════════════════════════════════════
-# MediClear AI — Docker Compose
+# MediClear AI - Docker Compose
 #
 #   cp .env.example .env   # set AI_PROVIDER + key/model
 #   docker compose up -d

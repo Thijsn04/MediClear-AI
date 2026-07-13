@@ -2,7 +2,7 @@
 Google Gemini provider.
 
 The google-generativeai SDK is synchronous, so every call is dispatched to a
-worker thread via ``asyncio.to_thread`` — this keeps the async event loop free
+worker thread via ``asyncio.to_thread`` - this keeps the async event loop free
 and lets the server handle concurrent requests (the previous implementation
 blocked the loop on every Gemini call).
 
@@ -22,7 +22,7 @@ logger = get_logger(__name__)
 
 
 class GeminiProvider(BaseAIProvider):
-    """Google Gemini provider — multimodal, non-blocking."""
+    """Google Gemini provider - multimodal, non-blocking."""
 
     def __init__(self, api_key: str, model: str) -> None:
         self._api_key = api_key

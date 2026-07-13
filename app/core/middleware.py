@@ -2,7 +2,7 @@
 ASGI middleware: request IDs and a hard body-size guard.
 
 The body-size guard rejects oversized requests based on the ``Content-Length``
-header *before* the body is read into memory — closing the memory-exhaustion
+header *before* the body is read into memory - closing the memory-exhaustion
 hole where uploads were fully buffered before the size limit was checked.
 """
 

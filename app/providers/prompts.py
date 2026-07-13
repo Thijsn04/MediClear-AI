@@ -16,7 +16,7 @@ _LEVEL_GUIDANCE = {
     ),
     "B1": (
         "Use short, clear sentences and common words. Explain medical terms in "
-        "plain language. Aim for CEFR B1 — an average adult reader."
+        "plain language. Aim for CEFR B1 - an average adult reader."
     ),
     "B2": (
         "Use clear language but you may keep some precision. Explain medical "

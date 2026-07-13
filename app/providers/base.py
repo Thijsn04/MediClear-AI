@@ -2,8 +2,8 @@
 Provider contract.
 
 Providers are deliberately *thin*: each one implements a single low-level
-primitive — :meth:`BaseAIProvider._complete` (and optionally
-:meth:`BaseAIProvider._stream`) — that turns a normalised message list into
+primitive - :meth:`BaseAIProvider._complete` (and optionally
+:meth:`BaseAIProvider._stream`) - that turns a normalised message list into
 text. All the domain logic (prompt construction, JSON parsing into a
 :class:`StructuredAnalysis`, faithfulness grounding, readability) lives once in
 this base class, so adding a provider means writing ~40 lines, not duplicating
@@ -143,7 +143,7 @@ class BaseAIProvider(ABC):
         yield  # pragma: no cover  (makes this an async generator)
 
     # ------------------------------------------------------------------
-    # High-level operations (shared logic — do not override)
+    # High-level operations (shared logic - do not override)
     # ------------------------------------------------------------------
 
     async def analyze_document(
@@ -290,7 +290,7 @@ class BaseAIProvider(ABC):
         if payload is not None:
             try:
                 return StructuredAnalysis.model_validate(payload)
-            except Exception:  # noqa: BLE001 — fall through to text fallback
+            except Exception:  # noqa: BLE001 - fall through to text fallback
                 pass
         # Fallback: the model returned prose, not JSON. Preserve it as the
         # explanation so the caller still gets a usable result.

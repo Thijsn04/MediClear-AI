@@ -1,13 +1,12 @@
 /**
- * MediClear AI — Frontend Application
+ * MediClear AI frontend.
  *
- * Vanilla JS, no build step, no external CDNs. The API returns a *structured*
- * analysis object, which we render directly into the DOM with textContent —
- * no markdown parser and no innerHTML of model output, so there is no XSS
- * surface. Chat answers stream over Server-Sent Events. Light/dark themes.
+ * Vanilla JS, no build step, no external CDNs. The API returns a structured
+ * analysis object, which we render directly into the DOM with textContent, so
+ * there is no markdown parser and no innerHTML of model output (no XSS surface).
+ * Chat answers stream over Server-Sent Events. Light and dark themes.
  */
 
-/* ── State ────────────────────────────────────────────────────────────────── */
 const state = {
   sessionId: null,
   currentLanguage: 'en',
@@ -53,7 +52,7 @@ const el = {
   errorMessage: $('error-message'),
 };
 
-/* ── Theme ────────────────────────────────────────────────────────────────── */
+/* Theme */
 function initTheme() {
   const saved = localStorage.getItem('mediclear-theme');
   if (saved === 'light' || saved === 'dark') {
@@ -68,7 +67,7 @@ function initTheme() {
   });
 }
 
-/* ── i18n ─────────────────────────────────────────────────────────────────── */
+/* i18n */
 function t(key) {
   const lang = state.translations[state.uiLanguage];
   if (lang && lang[key]) return lang[key];
@@ -85,8 +84,7 @@ function applyTranslations() {
     const value = t(node.getAttribute('data-i18n-placeholder'));
     if (value) node.placeholder = value;
   });
-  const rtl = isRtl(state.uiLanguage);
-  document.documentElement.setAttribute('dir', rtl ? 'rtl' : 'ltr');
+  document.documentElement.setAttribute('dir', isRtl(state.uiLanguage) ? 'rtl' : 'ltr');
   document.documentElement.setAttribute('lang', state.uiLanguage);
 }
 
@@ -95,7 +93,7 @@ function isRtl(code) {
   return !!(lang && lang.rtl);
 }
 
-/* ── API helper ───────────────────────────────────────────────────────────── */
+/* API */
 async function apiFetch(path, options = {}) {
   const resp = await fetch(path, options);
   if (!resp.ok) {
@@ -106,7 +104,7 @@ async function apiFetch(path, options = {}) {
   return resp;
 }
 
-/* ── Init ─────────────────────────────────────────────────────────────────── */
+/* Init */
 async function init() {
   initTheme();
   try {
@@ -137,7 +135,7 @@ async function init() {
   }
 }
 
-/* ── Events ───────────────────────────────────────────────────────────────── */
+/* Events */
 function bindEvents() {
   el.uiLangSelect.addEventListener('change', () => { state.uiLanguage = el.uiLangSelect.value; applyTranslations(); });
   el.responseLang.addEventListener('change', () => { state.currentLanguage = el.responseLang.value; });
@@ -176,10 +174,10 @@ function bindEvents() {
 
 function autoGrow() {
   el.chatInput.style.height = 'auto';
-  el.chatInput.style.height = Math.min(el.chatInput.scrollHeight, 160) + 'px';
+  el.chatInput.style.height = Math.min(el.chatInput.scrollHeight, 150) + 'px';
 }
 
-/* ── Tabs & files ─────────────────────────────────────────────────────────── */
+/* Tabs and files */
 function switchTab(tab) {
   const isText = tab === 'text';
   el.tabText.classList.toggle('active', isText);
@@ -203,18 +201,13 @@ function handleFileSelected(file) {
     img.src = URL.createObjectURL(file);
     img.alt = `Preview of ${file.name}`;
     el.filePreview.appendChild(img);
-  } else {
-    const icon = document.createElement('span');
-    icon.textContent = '📄';
-    icon.style.fontSize = '1.6rem';
-    el.filePreview.appendChild(icon);
   }
   const label = document.createElement('span');
-  label.textContent = `${file.name} · ${formatBytes(file.size)}`;
+  label.textContent = `${file.name} (${formatBytes(file.size)})`;
   el.filePreview.appendChild(label);
 }
 
-/* ── Analysis ─────────────────────────────────────────────────────────────── */
+/* Analysis */
 async function handleAnalyze() {
   const activeTab = el.tabText.classList.contains('active') ? 'text' : 'file';
   const textValue = el.textInput.value.trim();
@@ -244,12 +237,11 @@ async function handleAnalyze() {
   }
 }
 
-/* ── Structured, XSS-safe rendering ───────────────────────────────────────── */
+/* Structured, XSS-safe rendering */
 function showResults(data) {
-  el.providerBadge.textContent =
-    `${data.provider} · ${data.model} · ${data.language.toUpperCase()}${data.cached ? ' · cached' : ''}`;
-  el.providerBadge.classList.remove('hidden');
   renderAnalysis(el.analysisContent, data.analysis, data.language);
+  el.providerBadge.textContent = '';
+  el.providerBadge.classList.add('hidden');
   el.audioContainer.classList.add('hidden');
   el.chatMessages.textContent = '';
   el.resultsSection.classList.remove('hidden');
@@ -270,17 +262,6 @@ function renderAnalysis(container, a, language) {
     return;
   }
 
-  if (a.readability && a.readability.estimated_cefr) {
-    const meets = a.readability.meets_target;
-    const badge = document.createElement('div');
-    badge.className = 'readability-badge' + (meets === false ? ' miss' : '');
-    const dot = document.createElement('span'); dot.className = 'dotmark'; badge.appendChild(dot);
-    const label = document.createElement('span');
-    label.textContent = `${t('reading_level') || 'Reading level'}: ${a.readability.estimated_cefr}`;
-    badge.appendChild(label);
-    container.appendChild(badge);
-  }
-
   if (a.summary) { container.appendChild(h(2, t('sec_summary') || 'Summary')); container.appendChild(p(a.summary)); }
   if (a.explanation) {
     container.appendChild(h(2, t('sec_explanation') || 'Explanation'));
@@ -288,7 +269,7 @@ function renderAnalysis(container, a, language) {
   }
 
   if (a.lab_values && a.lab_values.length) {
-    container.appendChild(h(2, t('sec_labs') || 'Lab Values'));
+    container.appendChild(h(2, t('sec_labs') || 'Lab values'));
     container.appendChild(buildLabTable(a.lab_values));
   }
 
@@ -298,12 +279,12 @@ function renderAnalysis(container, a, language) {
   }
 
   if (a.key_terms && a.key_terms.length) {
-    container.appendChild(h(2, t('sec_terms') || 'Key Medical Terms'));
+    container.appendChild(h(2, t('sec_terms') || 'Key medical terms'));
     container.appendChild(buildTerms(a.key_terms));
   }
 
   if (a.action_items && a.action_items.length) {
-    container.appendChild(h(2, t('sec_actions') || 'What This Means for You'));
+    container.appendChild(h(2, t('sec_actions') || 'What this means for you'));
     const ul = document.createElement('ul');
     a.action_items.forEach(item => { const li = document.createElement('li'); li.textContent = item; ul.appendChild(li); });
     container.appendChild(ul);
@@ -325,29 +306,21 @@ function buildTerms(terms) {
     item.className = 'term-item';
     const name = document.createElement('span');
     name.className = 'term-name';
-    name.textContent = kt.term;
+    name.textContent = kt.term + ': ';
     item.appendChild(name);
-
-    if (kt.source && kt.source !== 'model') {
-      const chip = document.createElement('span');
-      chip.className = 'source-chip ' + kt.source;
-      if (kt.source_url) {
-        const link = document.createElement('a');
-        link.href = kt.source_url; link.target = '_blank'; link.rel = 'noopener noreferrer';
-        link.textContent = kt.source === 'online' ? 'MedlinePlus ↗' : 'glossary';
-        chip.appendChild(link);
-      } else {
-        chip.textContent = kt.source === 'glossary' ? 'glossary' : kt.source;
-      }
-      item.appendChild(chip);
+    const def = document.createElement('span');
+    def.className = 'term-def';
+    def.textContent = kt.definition;
+    item.appendChild(def);
+    if (kt.source_url) {
+      const link = document.createElement('a');
+      link.className = 'term-learn';
+      link.href = kt.source_url;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      link.textContent = t('learn_more') || 'Learn more';
+      item.appendChild(link);
     }
-    if (kt.found_in_source === false) {
-      const note = document.createElement('span');
-      note.className = 'term-note';
-      note.textContent = t('term_not_in_source') || '(not found verbatim in your document)';
-      item.appendChild(note);
-    }
-    item.appendChild(document.createTextNode(' — ' + kt.definition));
     li.appendChild(item);
     ul.appendChild(li);
   });
@@ -363,7 +336,7 @@ function buildMedications(meds) {
     card.className = 'med-card';
     const name = document.createElement('div'); name.className = 'med-name'; name.textContent = m.name;
     card.appendChild(name);
-    const bits = [m.dose, m.frequency].filter(Boolean).join(' · ');
+    const bits = [m.dose, m.frequency].filter(Boolean).join(', ');
     if (bits) { const meta = document.createElement('div'); meta.className = 'med-meta'; meta.textContent = bits; card.appendChild(meta); }
     if (m.purpose) { const pu = document.createElement('div'); pu.className = 'med-meta'; pu.textContent = m.purpose; card.appendChild(pu); }
     li.appendChild(card);
@@ -384,15 +357,11 @@ function buildLabTable(labs) {
   const tbody = document.createElement('tbody');
   labs.forEach(lv => {
     const tr = document.createElement('tr');
-    const cells = [
-      lv.name,
-      `${lv.value}${lv.unit ? ' ' + lv.unit : ''}`,
-      lv.reference_range || '—',
-    ];
-    cells.forEach(c => { const td = document.createElement('td'); td.textContent = c; tr.appendChild(td); });
+    [lv.name, `${lv.value}${lv.unit ? ' ' + lv.unit : ''}`, lv.reference_range || '-']
+      .forEach(c => { const td = document.createElement('td'); td.textContent = c; tr.appendChild(td); });
     const flagTd = document.createElement('td');
     if (lv.flag) { flagTd.textContent = lv.flag; flagTd.className = 'flag-' + lv.flag.toLowerCase(); }
-    else flagTd.textContent = '—';
+    else flagTd.textContent = '-';
     tr.appendChild(flagTd);
     tbody.appendChild(tr);
   });
@@ -405,7 +374,7 @@ function hideResults() {
   el.chatSection.classList.add('hidden');
 }
 
-/* ── Text-to-speech ───────────────────────────────────────────────────────── */
+/* Text to speech */
 async function handleListen() {
   if (!state.analysisText) return;
   setLoading(true, t('loading_audio'));
@@ -433,7 +402,7 @@ function playAudio(blob) {
   el.audioPlayer.play().catch(() => {});
 }
 
-/* ── Chat (streaming) ─────────────────────────────────────────────────────── */
+/* Chat streaming */
 async function handleChat() {
   const message = el.chatInput.value.trim();
   if (!message || !state.sessionId) return;
@@ -513,7 +482,7 @@ function appendChatMessage(role, content, label) {
   return bubble;
 }
 
-/* ── Reset / loading / errors ─────────────────────────────────────────────── */
+/* Reset, loading, errors */
 function resetAll() {
   state.sessionId = null; state.analysisText = ''; state.selectedFile = null; state.audioBlob = null;
   el.textInput.value = '';

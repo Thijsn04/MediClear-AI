@@ -1,9 +1,9 @@
 """
-OpenAI provider — also covers every OpenAI-compatible API.
+OpenAI provider - also covers every OpenAI-compatible API.
 
 Set OPENAI_BASE_URL to redirect requests to any compatible server (Azure
 OpenAI, Ollama, Groq, LM Studio, vLLM, Together, Mistral). The model name is
-set freely via OPENAI_MODEL — nothing is hardcoded.
+set freely via OPENAI_MODEL - nothing is hardcoded.
 """
 
 from __future__ import annotations
@@ -107,7 +107,7 @@ class OpenAIProvider(BaseAIProvider):
         try:
             resp = await client.chat.completions.create(**kwargs)
         except Exception as exc:  # noqa: BLE001
-            # Some compatible servers reject response_format — retry without it.
+            # Some compatible servers reject response_format - retry without it.
             if json_mode:
                 kwargs.pop("response_format", None)
                 try:

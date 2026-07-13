@@ -2,7 +2,7 @@
 
 # 💬 MediClear AI
 
-**Turn dense medical documents into clear, patient-friendly explanations — cloud or on-prem, API-first.**
+**Turn dense medical documents into clear, patient-friendly explanations - cloud or on-prem, API-first.**
 
 A free, open-source FastAPI service that translates complex clinical language
 into simple explanations at a configurable reading level (A2/B1/B2), in 17
@@ -35,21 +35,21 @@ integrations and a rendered view for humans.
 
 ## Highlights
 
-- **Structured output** — every analysis is a typed object (summary, explanation,
+- **Structured output** - every analysis is a typed object (summary, explanation,
   key terms, action items, lab values, medications, readability) plus a rendered
   markdown view. Built for EHR/mobile integration, not just display.
-- **Faithful, measured clarification** — flags key terms not found in the source
+- **Faithful, measured clarification** - flags key terms not found in the source
   document, scores readability (Flesch/CEFR), and can re-simplify to hit a target
   level (A2/B1/B2).
-- **Provider-agnostic** — Google Gemini, OpenAI, Anthropic Claude, and any
+- **Provider-agnostic** - Google Gemini, OpenAI, Anthropic Claude, and any
   OpenAI-compatible server (Ollama, Azure, Groq, vLLM, LM Studio). Model names
   are free strings; add a fallback chain for resilience.
-- **API-first platform** — API-key auth, rate limiting, SSE streaming chat,
+- **API-first platform** - API-key auth, rate limiting, SSE streaming chat,
   session management, result caching, Prometheus metrics, unified errors.
-- **Privacy-conscious** — `ZERO_RETENTION` mode, audit logging (metadata only),
+- **Privacy-conscious** - `ZERO_RETENTION` mode, audit logging (metadata only),
   a fully offline/air-gapped path, and document content never written to logs.
 - **17 languages**, RTL-aware output, optional text-to-speech (cloud or offline).
-- **Production-ready** — Docker, Redis-pluggable state, health/readiness,
+- **Production-ready** - Docker, Redis-pluggable state, health/readiness,
   structured JSON logging, CI (ruff + mypy + pytest), typed throughout.
 
 ---
@@ -82,7 +82,7 @@ uvicorn app.main:app --reload
 
 ## Deployment targets
 
-Both are reachable by configuration alone — one codebase.
+Both are reachable by configuration alone - one codebase.
 
 **☁️ Cloud, API-first**
 ```env
@@ -174,7 +174,7 @@ convenience string, a `session_id` for follow-ups, and provider/model metadata.
 
 ## Configuration
 
-Everything is an environment variable — full table in
+Everything is an environment variable - full table in
 [docs/configuration.md](docs/configuration.md). Highlights: `AI_PROVIDER`,
 `TARGET_READING_LEVEL`, `REQUIRE_API_KEY`/`API_KEYS`, `RATE_LIMIT_*`, `REDIS_URL`,
 `ZERO_RETENTION`, `TTS_BACKEND`, `ENABLE_FRONTEND`, `ALLOWED_ORIGINS`.
@@ -189,7 +189,7 @@ pip install '.[all,ocr,tts-local,dev]'
 ruff check app/ tests/       # lint
 ruff format --check app/ tests/
 mypy app/                    # type check
-pytest -q                    # tests (no API keys needed — uses a MockProvider)
+pytest -q                    # tests (no API keys needed - uses a MockProvider)
 ```
 
 CI runs the same gate on Python 3.11 and 3.12 plus a Docker build.
@@ -214,7 +214,7 @@ Security reports: [SECURITY.md](SECURITY.md).
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT - see [LICENSE](LICENSE).
 
 ---
 

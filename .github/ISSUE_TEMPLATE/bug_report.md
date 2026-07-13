@@ -23,4 +23,4 @@ What you expected to happen.
 - Python version:
 
 **Logs**
-Relevant log output (structured logs never contain document content — safe to paste).
+Relevant log output (structured logs never contain document content - safe to paste).

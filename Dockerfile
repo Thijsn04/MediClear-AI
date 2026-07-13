@@ -1,5 +1,5 @@
 # ════════════════════════════════════════════════════════════
-# MediClear AI — Dockerfile
+# MediClear AI - Dockerfile
 # Multi-stage build. Choose which optional features to bake in with
 # the EXTRAS build arg (default: the three cloud providers).
 #

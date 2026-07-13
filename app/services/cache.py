@@ -4,7 +4,7 @@ Result cache.
 Identical analysis requests (same document content, language, target level, and
 model) reuse a cached structured result instead of re-billing the provider.
 Backed by Redis when configured (shared across instances) or an in-process
-TTL-LRU otherwise. Cache keys are salted hashes of content — the raw document
+TTL-LRU otherwise. Cache keys are salted hashes of content - the raw document
 is never used as a key and never leaves the process for the in-memory backend.
 """
 
@@ -95,5 +95,5 @@ class ResultCache:
             return
         try:
             await self._backend.set(key, analysis.model_dump_json(), self._ttl)
-        except Exception as exc:  # noqa: BLE001 — caching must never break a request
+        except Exception as exc:  # noqa: BLE001 - caching must never break a request
             logger.warning("cache.set_failed", error=str(exc))

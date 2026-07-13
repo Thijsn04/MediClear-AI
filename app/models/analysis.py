@@ -2,7 +2,7 @@
 Structured analysis model.
 
 The core value of MediClear over "a thin LLM wrapper" is that an analysis is a
-*typed, structured object* — not an opaque markdown blob. API consumers (EHR
+*typed, structured object* - not an opaque markdown blob. API consumers (EHR
 integrations, mobile apps) read the fields; the frontend renders from them; and
 a rendered markdown convenience string is provided for quick display.
 
@@ -20,7 +20,7 @@ from pydantic import BaseModel, Field
 
 
 class DocumentType(str, Enum):
-    """Detected clinical document type — drives type-specific prompting."""
+    """Detected clinical document type - drives type-specific prompting."""
 
     DISCHARGE_SUMMARY = "discharge_summary"
     LAB_REPORT = "lab_report"
@@ -37,7 +37,7 @@ class KeyTerm(BaseModel):
     """A medical term found in the document with a plain-language definition."""
 
     term: str = Field(..., description="The medical term as it appears.")
-    definition: str = Field(..., description="Plain-language explanation (1–2 sentences).")
+    definition: str = Field(..., description="Plain-language explanation (1-2 sentences).")
     # Whether this term was actually present in the source document. Grounding
     # check: terms the model invented that are not in the source are flagged.
     found_in_source: bool = Field(
@@ -86,7 +86,7 @@ class StructuredAnalysis(BaseModel):
     """The typed result of analysing a medical document."""
 
     document_type: DocumentType = Field(default=DocumentType.OTHER)
-    summary: str = Field(default="", description="2–3 sentence overview.")
+    summary: str = Field(default="", description="2-3 sentence overview.")
     explanation: str = Field(default="", description="Accessible detailed explanation.")
     key_terms: list[KeyTerm] = Field(default_factory=list)
     action_items: list[str] = Field(
@@ -122,7 +122,7 @@ class StructuredAnalysis(BaseModel):
         if self.lab_values:
             rows = "\n".join(
                 f"| {lv.name} | {lv.value}{(' ' + lv.unit) if lv.unit else ''} "
-                f"| {lv.reference_range or '—'} | {lv.flag or '—'} |"
+                f"| {lv.reference_range or '-'} | {lv.flag or '-'} |"
                 for lv in self.lab_values
             )
             parts.append(
@@ -135,7 +135,7 @@ class StructuredAnalysis(BaseModel):
         if self.medications:
             rows = "\n".join(
                 f"- **{m.name}**"
-                + (f" — {m.dose}" if m.dose else "")
+                + (f" - {m.dose}" if m.dose else "")
                 + (f", {m.frequency}" if m.frequency else "")
                 + (f" ({m.purpose})" if m.purpose else "")
                 for m in self.medications
@@ -144,7 +144,7 @@ class StructuredAnalysis(BaseModel):
 
         if self.key_terms:
             rows = "\n".join(
-                f"- **{kt.term}** — {kt.definition}"
+                f"- **{kt.term}** - {kt.definition}"
                 + ("" if kt.found_in_source else "  _(not found verbatim in your document)_")
                 for kt in self.key_terms
             )

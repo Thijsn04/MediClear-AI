@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "mediclear-ai"
 version = "3.0.0"
-description = "State-of-the-art medical document simplification — cloud or on-prem, API-first."
+description = "State-of-the-art medical document simplification - cloud or on-prem, API-first."
 readme = "README.md"
 license = { file = "LICENSE" }
 authors = [{ name = "Thijs Nannings" }]
@@ -24,7 +24,7 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Medical Science Apps.",
 ]
 
-# Core runtime only — AI provider SDKs and optional features are extras, so a
+# Core runtime only - AI provider SDKs and optional features are extras, so a
 # minimal deployment (e.g. an on-prem Ollama box) installs only what it needs.
 dependencies = [
     "fastapi>=0.115.0",

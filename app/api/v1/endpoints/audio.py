@@ -1,4 +1,4 @@
-"""Text-to-speech endpoint — converts text to audio."""
+"""Text-to-speech endpoint - converts text to audio."""
 
 from __future__ import annotations
 

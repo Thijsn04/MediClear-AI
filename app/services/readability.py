@@ -4,7 +4,7 @@ Readability scoring.
 The tool claims to write at a target CEFR level; this module *measures* it so
 the claim can be verified and enforced. We compute a Flesch Reading Ease score
 (a well-known, dependency-free heuristic) and map it to an approximate CEFR
-band. It is a signal, not a certification — most reliable for Latin-script
+band. It is a signal, not a certification - most reliable for Latin-script
 languages, and used to decide whether a simplification pass is worthwhile.
 """
 
@@ -28,7 +28,7 @@ def _count_syllables(word: str) -> int:
 
 
 def flesch_reading_ease(text: str) -> float | None:
-    """Return the Flesch Reading Ease score (0–100, higher = easier)."""
+    """Return the Flesch Reading Ease score (0-100, higher = easier)."""
     words = _WORD_RE.findall(text)
     sentences = [s for s in _SENTENCE_RE.split(text) if s.strip()]
     if not words or not sentences:

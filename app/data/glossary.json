@@ -1,14 +1,14 @@
 {
   "_meta": {
     "description": "Bundled offline glossary of common medical terms with plain-language (approx. B1) English definitions. Used to ground key-term definitions so they are not invented by the model. Extend freely; keys must be lowercase.",
-    "license": "CC0 — definitions are original plain-language summaries."
+    "license": "CC0 - definitions are original plain-language summaries."
   },
   "terms": {
     "hypertension": "High blood pressure. It means the force of blood pushing against your artery walls is higher than it should be.",
     "hypotension": "Low blood pressure. It means the force of blood in your arteries is lower than normal.",
     "myocardial infarction": "A heart attack. It happens when blood flow to part of the heart is blocked and heart muscle is damaged.",
     "angina": "Chest pain or tightness caused by reduced blood flow to the heart.",
-    "arrhythmia": "An irregular heartbeat — the heart beats too fast, too slow, or unevenly.",
+    "arrhythmia": "An irregular heartbeat - the heart beats too fast, too slow, or unevenly.",
     "atrial fibrillation": "A common type of irregular, often fast heartbeat that can raise the risk of stroke.",
     "tachycardia": "A faster-than-normal heart rate.",
     "bradycardia": "A slower-than-normal heart rate.",
@@ -39,7 +39,7 @@
     "pneumonia": "An infection that inflames the air sacs in the lungs, which may fill with fluid.",
     "bronchitis": "Inflammation of the airways in the lungs, usually causing coughing.",
     "asthma": "A condition where the airways narrow and swell, making it hard to breathe.",
-    "copd": "Chronic obstructive pulmonary disease — a long-term lung condition that makes breathing difficult.",
+    "copd": "Chronic obstructive pulmonary disease - a long-term lung condition that makes breathing difficult.",
     "dyspnea": "Shortness of breath or difficulty breathing.",
     "dyspnoea": "Shortness of breath or difficulty breathing.",
     "hypoxia": "Not enough oxygen reaching the body's tissues.",
@@ -67,7 +67,7 @@
     "stroke": "A sudden interruption of blood flow to the brain that can damage brain cells.",
     "seizure": "A sudden burst of electrical activity in the brain that can affect movement or awareness.",
     "migraine": "A strong, often one-sided headache, sometimes with nausea and sensitivity to light.",
-    "syncope": "Fainting — a brief loss of consciousness caused by a drop in blood flow to the brain.",
+    "syncope": "Fainting - a brief loss of consciousness caused by a drop in blood flow to the brain.",
     "acute": "Coming on suddenly and lasting a short time.",
     "chronic": "Lasting a long time or coming back again and again.",
     "prognosis": "The likely course and outcome of a disease.",
@@ -80,8 +80,8 @@
     "antibiotic": "A medicine that fights bacterial infections.",
     "anticoagulant": "A medicine that helps prevent blood clots, sometimes called a blood thinner.",
     "hypertensive": "Relating to or having high blood pressure.",
-    "npo": "Nothing by mouth — you should not eat or drink, often before a procedure.",
-    "prn": "As needed — take the medicine only when you need it.",
+    "npo": "Nothing by mouth - you should not eat or drink, often before a procedure.",
+    "prn": "As needed - take the medicine only when you need it.",
     "bid": "Twice a day (a dosing instruction).",
     "tid": "Three times a day (a dosing instruction).",
     "stat": "Immediately (an instruction to do something right away)."

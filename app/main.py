@@ -1,5 +1,5 @@
 """
-MediClear AI — FastAPI application factory.
+MediClear AI - FastAPI application factory.
 
 Entry point:
     uvicorn app.main:app --reload

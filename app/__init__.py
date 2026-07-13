@@ -1,1 +1,1 @@
-# MediClear AI — Enterprise Medical Document Simplification
+# MediClear AI - Enterprise Medical Document Simplification

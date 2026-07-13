@@ -21,7 +21,7 @@ Open an issue with the `enhancement` label and describe the feature and the use 
 1. **Fork** the repository and create a branch: `git checkout -b feature/my-feature`
 2. **Install** everything: `pip install '.[all,ocr,tts-local,dev]'`
 3. **Make your changes** following the code style below
-4. **Run the quality gate** (all must pass — CI runs the same):
+4. **Run the quality gate** (all must pass - CI runs the same):
    ```bash
    ruff check app/ tests/
    ruff format --check app/ tests/
@@ -41,7 +41,7 @@ Open an issue with the `enhancement` label and describe the feature and the use 
 
 ## Adding a new AI provider
 
-Providers are thin — implement one primitive and the base class does the rest:
+Providers are thin - implement one primitive and the base class does the rest:
 
 1. Create `app/providers/your_provider.py` subclassing `BaseAIProvider` and
    implement `_complete` (and optionally `_stream`), plus the identity properties.

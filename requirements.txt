@@ -1,4 +1,4 @@
-# MediClear AI — Core runtime dependencies
+# MediClear AI - Core runtime dependencies
 #
 # This file installs ONLY the core server. AI provider SDKs and optional
 # features are extras so you install just what your deployment needs.

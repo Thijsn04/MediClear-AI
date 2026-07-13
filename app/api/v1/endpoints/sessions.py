@@ -1,4 +1,4 @@
-"""Session management — inspect and delete chat sessions."""
+"""Session management - inspect and delete chat sessions."""
 
 from __future__ import annotations
 

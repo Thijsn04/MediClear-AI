@@ -24,7 +24,7 @@ from app.services.session_store import InMemorySessionStore
 
 
 class MockProvider(BaseAIProvider):
-    """Deterministic provider for tests — returns valid StructuredAnalysis JSON."""
+    """Deterministic provider for tests - returns valid StructuredAnalysis JSON."""
 
     @property
     def name(self) -> str:

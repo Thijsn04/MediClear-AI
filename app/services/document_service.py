@@ -82,7 +82,7 @@ class DocumentService:
             logger.info("document.pdf_extracted", pages=len(pages), filename=filename)
             return ProcessedDocument(type="text", text=text, filename=filename)
 
-        # No embedded text — likely a scan. Try OCR before giving up.
+        # No embedded text - likely a scan. Try OCR before giving up.
         if self._enable_ocr:
             ocr_text = self._ocr_pdf(content)
             if ocr_text and ocr_text.strip():
@@ -92,7 +92,7 @@ class DocumentService:
         raise DocumentProcessingError(
             "Could not extract text from the PDF (it appears to be a scanned "
             "image and OCR is unavailable). Please upload a photo of the "
-            "document instead — it will be read by a vision model."
+            "document instead - it will be read by a vision model."
         )
 
     def _ocr_pdf(self, content: bytes) -> str | None:

@@ -1,4 +1,4 @@
-"""API v1 router — aggregates all endpoint routers."""
+"""API v1 router - aggregates all endpoint routers."""
 
 from __future__ import annotations
 
