@@ -1,0 +1,15 @@
+apiVersion: v2
+name: mediclear-ai
+description: State-of-the-art medical document simplification - cloud or on-prem, API-first.
+type: application
+version: 0.1.0
+appVersion: "3.0.0"
+home: https://github.com/Thijsn04/MediClear-AI
+sources:
+  - https://github.com/Thijsn04/MediClear-AI
+maintainers:
+  - name: Thijs Nannings
+keywords:
+  - healthcare
+  - ai
+  - nlp

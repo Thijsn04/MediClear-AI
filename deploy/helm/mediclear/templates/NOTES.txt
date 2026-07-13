@@ -1,0 +1,23 @@
+MediClear AI has been deployed.
+
+1. Check the pods are ready:
+   kubectl get pods -l app.kubernetes.io/instance={{ .Release.Name }}
+
+2. {{ if .Values.ingress.enabled -}}
+   The app is exposed via Ingress at:
+   {{- range .Values.ingress.hosts }}
+     https://{{ .host }}
+   {{- end }}
+   {{- else -}}
+   Port-forward to reach it locally:
+     kubectl port-forward svc/{{ include "mediclear.fullname" . }} 8000:{{ .Values.service.port }}
+     open http://localhost:8000
+   {{- end }}
+
+3. Health & docs:
+     GET /api/v1/health      · /api/docs      · /metrics
+
+{{ if not .Values.existingSecret -}}
+SECURITY: API keys were taken from `.Values.secrets`. For production, create a
+Secret out-of-band and set `existingSecret` instead of committing keys to values.
+{{- end }}
