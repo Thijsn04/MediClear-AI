@@ -20,6 +20,15 @@ quality tooling, resilience, privacy controls, and full CI.
   flagged (`found_in_source`).
 - **Readability scoring & enforcement** - Flesch/CEFR estimate with an optional
   re-simplification pass toward a configurable target level (A2/B1/B2).
+- **Terminology grounding** - a bundled offline glossary (and an opt-in
+  MedlinePlus online lookup) backs key-term definitions with a trusted source
+  and records provenance (`source`, `source_url`) instead of trusting the model.
+- **Demo provider** (`AI_PROVIDER=demo`) - a canned, key-free provider so the
+  whole UI and API run end-to-end with no credentials.
+- **Deployment artifacts** - a Helm chart, a hardened Nginx TLS config, and a
+  production Docker Compose file with Redis enabled (see `deploy/`).
+- **Redesigned frontend** - a clean, minimal, light/dark UI that renders the
+  structured response (labs, medications, terms, actions) with no external CDNs.
 - **SSE streaming chat** at `/chat/{session_id}/stream`; grounded follow-ups now
   use the *source document*, not just the AI summary.
 - **API-key authentication** and **per-identity rate limiting** (memory or Redis)

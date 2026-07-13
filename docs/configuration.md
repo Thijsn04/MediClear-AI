@@ -8,7 +8,7 @@ sensible for local development; harden them for production. See
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `AI_PROVIDER` | `gemini` | `gemini` \| `openai` \| `anthropic` |
+| `AI_PROVIDER` | `gemini` | `gemini` \| `openai` \| `anthropic` \| `demo` (canned, no key) |
 | `AI_FALLBACK_PROVIDERS` | - | Ordered failover chain, e.g. `openai,anthropic` |
 | `AI_REQUEST_TIMEOUT_SECONDS` | `60` | Per-call timeout |
 | `AI_MAX_RETRIES` | `2` | Retries with exponential backoff before failover |
@@ -38,6 +38,18 @@ Set `AI_PROVIDER=openai` and `OPENAI_BASE_URL`:
 | `TARGET_READING_LEVEL` | `B1` | `A2` \| `B1` \| `B2` |
 | `ENFORCE_READING_LEVEL` | `true` | Re-simplify if output overshoots the target |
 | `MAX_SIMPLIFICATION_PASSES` | `1` | Extra simplification attempts |
+
+## Terminology grounding
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `TERMINOLOGY_ENABLED` | `true` | Back key-term definitions with a curated source |
+| `TERMINOLOGY_ONLINE` | `false` | Also query MedlinePlus (needs internet; EN/ES) |
+| `TERMINOLOGY_TIMEOUT_SECONDS` | `4.0` | Per-lookup timeout for the online source |
+
+The bundled offline glossary (`app/data/glossary.json`) always applies and works
+air-gapped. When a trusted definition is found, the key term's `source` becomes
+`glossary` or `online` and a `source_url` is attached where available.
 
 ## Sessions, cache & Redis
 

@@ -37,7 +37,7 @@ curl -X POST http://localhost:8000/api/v1/analyze \
     "explanation": "…",
     "key_terms": [
       {"term": "myocardial infarction", "definition": "a heart attack",
-       "found_in_source": true}
+       "found_in_source": true, "source": "glossary", "source_url": null}
     ],
     "action_items": ["Ask your doctor whether…"],
     "lab_values": [],
