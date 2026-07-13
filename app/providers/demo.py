@@ -125,6 +125,15 @@ class DemoProvider(BaseAIProvider):
     async def _stream(
         self, *, system: str, messages: list[Message], max_tokens: int, temperature: float
     ) -> AsyncIterator[str]:
+        # Analysis prompts ask for a JSON object; stream the canned JSON so the
+        # progressive explanation extractor has something to render. Otherwise
+        # (chat) stream the canned answer word by word.
+        if "JSON object" in system:
+            text = json.dumps(_DEMO_ANALYSIS)
+            for i in range(0, len(text), 24):
+                await asyncio.sleep(0.01)
+                yield text[i : i + 24]
+            return
         answer = (
             "That's a good question. Based on your discharge summary, the most "
             "important thing is to finish your antibiotics and rest. This is "

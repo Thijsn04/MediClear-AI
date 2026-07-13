@@ -185,6 +185,36 @@ class BaseAIProvider(ABC):
             initial_history=initial_history,
         )
 
+    async def stream_analysis(
+        self,
+        document: ProcessedDocument,
+        *,
+        language_name: str,
+        target_level: str,
+        max_tokens: int,
+        temperature: float,
+    ) -> AsyncIterator[str]:
+        """Stream the raw model output (JSON) for an analysis, chunk by chunk.
+
+        The caller accumulates the chunks, extracts a progressive explanation for
+        display, and parses the final text via :meth:`parse_analysis_text`.
+        """
+        system = build_analysis_prompt(language_name=language_name, target_level=target_level)
+        user = self._document_message(document)
+        async for chunk in self._stream(
+            system=system, messages=[user], max_tokens=max_tokens, temperature=temperature
+        ):
+            yield chunk
+
+    def parse_analysis_text(
+        self, text: str, *, source_text: str | None = None
+    ) -> StructuredAnalysis:
+        """Parse accumulated model text into a grounded StructuredAnalysis."""
+        analysis = self._parse_analysis(text)
+        if source_text:
+            self._apply_grounding(analysis, source_text)
+        return analysis
+
     async def simplify(
         self,
         analysis: StructuredAnalysis,

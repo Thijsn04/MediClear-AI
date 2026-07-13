@@ -23,6 +23,8 @@ from app.providers.registry import build_provider
 from app.services.ai_service import AIService
 from app.services.cache import InMemoryCache, RedisCache, ResultCache
 from app.services.document_service import DocumentService
+from app.services.idempotency import IdempotencyStore
+from app.services.jobs import InMemoryJobStore, JobRunner, JobStore, RedisJobStore
 from app.services.session_store import (
     InMemorySessionStore,
     RedisSessionStore,
@@ -72,6 +74,14 @@ def get_result_cache() -> ResultCache:
 
 
 @lru_cache
+def get_idempotency_store() -> IdempotencyStore:
+    settings = get_settings()
+    redis = get_redis()
+    backend = RedisCache(redis) if redis is not None else InMemoryCache(settings.cache_max_entries)
+    return IdempotencyStore(backend, ttl_seconds=settings.cache_ttl_seconds)
+
+
+@lru_cache
 def get_rate_limiter() -> RateLimiter:
     settings = get_settings()
     if not settings.rate_limit_enabled:
@@ -105,6 +115,20 @@ def get_ai_service() -> AIService:
         cache=get_result_cache(),
         settings=settings,
     )
+
+
+@lru_cache
+def get_job_store() -> JobStore:
+    settings = get_settings()
+    redis = get_redis()
+    if redis is not None:
+        return RedisJobStore(redis, ttl_seconds=settings.cache_ttl_seconds)
+    return InMemoryJobStore()
+
+
+@lru_cache
+def get_job_runner() -> JobRunner:
+    return JobRunner(get_ai_service(), get_job_store())
 
 
 @lru_cache

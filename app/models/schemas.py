@@ -130,6 +130,38 @@ class SessionResponse(BaseModel):
     created_at: datetime
 
 
+class BatchAnalyzeItem(BaseModel):
+    text: str = Field(..., min_length=10, max_length=100_000)
+    language: str = Field(default="en")
+    reading_level: Literal["A2", "B1", "B2"] | None = Field(default=None)
+
+    @field_validator("language")
+    @classmethod
+    def _check_language(cls, v: str) -> str:
+        return _validate_language(v)
+
+
+class BatchAnalyzeRequest(BaseModel):
+    items: list[BatchAnalyzeItem] = Field(..., min_length=1, max_length=50)
+
+
+class JobItemResultSchema(BaseModel):
+    index: int
+    status: Literal["succeeded", "failed"]
+    markdown: str | None = None
+    analysis: StructuredAnalysis | None = None
+    error: str | None = None
+
+
+class JobResponse(BaseModel):
+    job_id: str
+    status: Literal["queued", "processing", "succeeded", "failed", "partial"]
+    total: int
+    completed: int
+    results: list[JobItemResultSchema] = Field(default_factory=list)
+    created_at: datetime
+
+
 class ErrorResponse(BaseModel):
     error: str
     status_code: int

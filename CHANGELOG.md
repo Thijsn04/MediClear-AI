@@ -29,6 +29,13 @@ quality tooling, resilience, privacy controls, and full CI.
   production Docker Compose file with Redis enabled (see `deploy/`).
 - **Redesigned frontend** - a clean, minimal, light/dark UI that renders the
   structured response (labs, medications, terms, actions) with no external CDNs.
+- **Streaming analyse** (`POST /analyze/stream`) - progressively streams the
+  explanation as the model writes it, then delivers the full structured object.
+- **Idempotency keys** on `POST /analyze` - a repeated `Idempotency-Key` returns
+  the first response instead of re-running (and re-billing) the analysis.
+- **Async batch jobs** (`POST /analyze/batch`, `GET /jobs/{id}`) - queue up to 50
+  documents and poll for progress and results.
+- **Rate-limit headers** (`X-RateLimit-Limit` / `X-RateLimit-Remaining`).
 - **SSE streaming chat** at `/chat/{session_id}/stream`; grounded follow-ups now
   use the *source document*, not just the AI summary.
 - **API-key authentication** and **per-identity rate limiting** (memory or Redis)

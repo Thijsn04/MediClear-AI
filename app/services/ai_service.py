@@ -25,6 +25,7 @@ from app.providers.base import BaseAIProvider, ProcessedDocument
 from app.services import readability as readability_mod
 from app.services.cache import ResultCache, make_key
 from app.services.session_store import ChatSession, SessionStore
+from app.services.streaming import ExplanationStreamExtractor
 from app.services.terminology import TerminologyService
 
 logger = get_logger(__name__)
@@ -214,6 +215,63 @@ class AIService:
 
         await self._sessions.append_message(session_id, "user", message)
         await self._sessions.append_message(session_id, "assistant", "".join(collected))
+
+    async def stream_analyze(
+        self,
+        document: ProcessedDocument,
+        language: str,
+        target_level: str | None = None,
+    ) -> AsyncIterator[tuple[str, object]]:
+        """Stream an analysis. Yields ("delta", str) for progressive explanation
+        text, then ("result", AnalysisOutcome) once the full structured object is
+        ready. Falls back to a single ("result", ...) when the provider cannot
+        stream."""
+        target_level = target_level or self._settings.target_reading_level
+
+        if not self._provider.supports_streaming:
+            outcome = await self.analyze(document, language, target_level)
+            yield ("result", outcome)
+            return
+
+        language_name = get_language(language).english_name
+        accumulated: list[str] = []
+        extractor = ExplanationStreamExtractor()
+        async for chunk in self._provider.stream_analysis(
+            document,
+            language_name=language_name,
+            target_level=target_level,
+            max_tokens=self._settings.ai_max_output_tokens,
+            temperature=self._settings.ai_temperature,
+        ):
+            accumulated.append(chunk)
+            delta = extractor.feed("".join(accumulated))
+            if delta:
+                yield ("delta", delta)
+
+        analysis = self._provider.parse_analysis_text(
+            "".join(accumulated), source_text=document.text
+        )
+        if self._terminology is not None:
+            analysis.key_terms = await self._terminology.enrich(analysis.key_terms, language)
+        analysis.readability = readability_mod.assess(
+            analysis.explanation or analysis.summary, target_level
+        )
+        cache_key = self._cache_key(document, language, target_level)
+        if cache_key:
+            await self._cache.set(cache_key, analysis)
+        session_id = await self._maybe_create_session(document, analysis, language, language_name)
+        yield (
+            "result",
+            AnalysisOutcome(
+                analysis=analysis,
+                session_id=session_id,
+                provider=self._provider.name,
+                model=self._provider.model,
+                cached=False,
+                input_tokens=0,
+                output_tokens=0,
+            ),
+        )
 
     async def get_session(self, session_id: str) -> ChatSession:
         return await self._sessions.get(session_id)

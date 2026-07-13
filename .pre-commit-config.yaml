@@ -1,0 +1,31 @@
+# Pre-commit hooks for MediClear AI.
+#   pip install pre-commit && pre-commit install
+# Runs the same checks as CI on staged files before each commit.
+
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.6.9
+    hooks:
+      - id: ruff
+        args: [--fix]
+      - id: ruff-format
+
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.11.2
+    hooks:
+      - id: mypy
+        files: ^app/
+        additional_dependencies:
+          - pydantic>=2.4.0
+          - pydantic-settings>=2.4.0
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+      - id: check-yaml
+        args: [--allow-multiple-documents]
+        exclude: ^deploy/helm/
+      - id: check-added-large-files
+        args: [--maxkb=600]

@@ -12,13 +12,23 @@ Base path: `/api/v1`. When `REQUIRE_API_KEY=true`, send
 |--------|------|-------------|
 | `GET` | `/health` | Status, provider, session-store liveness |
 | `GET` | `/languages` | Supported languages (code, names, RTL) |
-| `POST` | `/analyze` | Analyse text or a file → structured result |
+| `POST` | `/analyze` | Analyse text or a file into a structured result |
+| `POST` | `/analyze/stream` | Same, streamed as SSE (progressive explanation + final result) |
+| `POST` | `/analyze/batch` | Queue up to 50 documents; returns a job id (202) |
+| `GET` | `/jobs/{job_id}` | Batch job status and results |
 | `POST` | `/chat/{session_id}` | Follow-up question (grounded) |
 | `POST` | `/chat/{session_id}/stream` | Same, streamed as SSE |
 | `GET` | `/sessions/{session_id}` | Session metadata |
 | `DELETE` | `/sessions/{session_id}` | Purge a session |
 | `POST` | `/audio` | Text-to-speech |
 | `GET` | `/metrics` | Prometheus metrics (top-level, not under `/api/v1`) |
+
+**Idempotency:** send an `Idempotency-Key` header on `POST /analyze` to make
+retries safe. A repeated key within the cache TTL returns the first response
+(with `Idempotency-Replayed: true`) instead of re-running the analysis.
+
+**Rate-limit headers:** responses include `X-RateLimit-Limit` and
+`X-RateLimit-Remaining`; a `429` adds `Retry-After`.
 
 ## Analyse a document
 
@@ -60,6 +70,40 @@ Upload a file instead:
 curl -X POST http://localhost:8000/api/v1/analyze \
   -F "file=@discharge_summary.pdf" -F "language=nl"
 ```
+
+## Streaming analyse
+
+Same inputs as `/analyze`. Streams the explanation progressively, then the full
+structured result:
+
+```bash
+curl -N -X POST http://localhost:8000/api/v1/analyze/stream \
+  -F "text=..." -F "language=en"
+```
+
+```
+data: {"delta": "You came to hospital with "}
+data: {"delta": "a fever and a cough..."}
+data: {"result": { ...full AnalyzeResponse... }}
+data: {"done": true}
+```
+
+## Batch analyse (async jobs)
+
+```bash
+# Submit (returns 202 + job_id)
+curl -X POST http://localhost:8000/api/v1/analyze/batch \
+  -H "Content-Type: application/json" \
+  -d '{"items": [{"text": "...", "language": "en"},
+                 {"text": "...", "language": "nl", "reading_level": "A2"}]}'
+
+# Poll
+curl http://localhost:8000/api/v1/jobs/$JOB_ID
+```
+
+The job response reports `status` (`queued` / `processing` / `succeeded` /
+`partial` / `failed`), `completed` / `total`, and a `results` array where each
+item is a structured `analysis` or an `error`.
 
 ## Follow-up chat (streaming)
 

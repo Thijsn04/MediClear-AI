@@ -8,7 +8,7 @@ for downstream use (audit logging).
 
 from __future__ import annotations
 
-from fastapi import Depends, Request
+from fastapi import Depends, Request, Response
 
 from app.config import Settings, get_settings
 from app.core.exceptions import RateLimitError
@@ -19,13 +19,17 @@ from app.dependencies import get_rate_limiter
 
 async def rate_limited_identity(
     request: Request,
+    response: Response,
     settings: Settings = Depends(get_settings),
     limiter: RateLimiter = Depends(get_rate_limiter),
 ) -> str:
     identity = authenticate(request, settings)
     if not settings.rate_limit_enabled:
         return identity
-    allowed, retry_after = await limiter.check(identity)
+    allowed, retry_after, remaining = await limiter.check(identity)
     if not allowed:
         raise RateLimitError(retry_after)
+    if remaining >= 0:
+        response.headers["X-RateLimit-Limit"] = str(settings.rate_limit_requests)
+        response.headers["X-RateLimit-Remaining"] = str(remaining)
     return identity
